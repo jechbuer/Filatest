@@ -4,7 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="theme-color" content="#3b82f6">
-    <title>Filament Manager Pro</title>
+    <meta name="description" content="3D-Drucker Filament Manager mit Barcode-Scanning">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Filament Store">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192x192.png">
+    <link rel="apple-touch-icon" sizes="192x192" href="icons/icon-192x192.png">
+    <title>Filament Store</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://unpkg.com/dexie@3.2.4/dist/dexie.js"></script>
@@ -380,4 +387,249 @@
             if (existing) {
                 showConsumeForm(existing.id);
             } else {
-                docume
+                document.getElementById('f-barcode').value = barcode;
+                showAddForm();
+            }
+        }
+
+        function showAddForm() {
+            document.getElementById('add-form').classList.remove('hidden');
+        }
+
+        function closeAddForm() {
+            document.getElementById('add-form').classList.add('hidden');
+            resetAddForm();
+        }
+
+        function resetAddForm() {
+            document.getElementById('f-barcode').value = '';
+            document.getElementById('f-brand').value = '';
+            document.getElementById('f-color').value = '';
+            document.getElementById('f-gross-weight').value = '';
+            document.getElementById('f-tara').value = '220';
+            document.getElementById('f-net-weight').textContent = '0';
+            document.getElementById('f-brand-select').value = '';
+            document.getElementById('f-nozzle').value = '';
+            document.getElementById('f-bed').value = '';
+        }
+
+        function setSpoolType(type) {
+            document.querySelectorAll('.spool-type-btn').forEach(btn => {
+                btn.classList.remove('border-blue-500');
+                btn.classList.add('border-gray-300');
+            });
+            event.target.closest('.spool-type-btn').classList.remove('border-gray-300');
+            event.target.closest('.spool-type-btn').classList.add('border-blue-500');
+            
+            const tara = type === 'plastic' ? 220 : 145;
+            document.getElementById('f-tara').value = tara;
+            calculateNet();
+        }
+
+        function updateTara() {
+            const select = document.getElementById('f-brand-select');
+            const option = select.options[select.selectedIndex];
+            if (option && option.dataset.tara) {
+                document.getElementById('f-tara').value = option.dataset.tara;
+                calculateNet();
+            }
+        }
+
+        function calculateNet() {
+            const gross = parseFloat(document.getElementById('f-gross-weight').value) || 0;
+            const tara = parseFloat(document.getElementById('f-tara').value) || 0;
+            const net = Math.max(0, gross - tara);
+            document.getElementById('f-net-weight').textContent = net;
+        }
+
+        async function saveFilament() {
+            const barcode = document.getElementById('f-barcode').value || Date.now().toString();
+            const brand = document.getElementById('f-brand').value;
+            const material = document.getElementById('f-material').value;
+            const color = document.getElementById('f-color').value;
+            const weight = parseInt(document.getElementById('f-net-weight').textContent) || 0;
+            const diameter = document.getElementById('f-diameter').value;
+            const nozzle = document.getElementById('f-nozzle').value;
+            const bed = document.getElementById('f-bed').value;
+
+            if (!brand || !color || weight <= 0) {
+                alert('Bitte fülle alle Pflichtfelder aus (Hersteller, Farbe, Gewicht)');
+                return;
+            }
+
+            await db.filaments.add({
+                barcode,
+                brand,
+                material,
+                color,
+                weight,
+                diameter,
+                nozzleTemp: nozzle ? parseInt(nozzle) : null,
+                bedTemp: bed ? parseInt(bed) : null,
+                createdAt: new Date()
+            });
+
+            closeAddForm();
+            loadFilaments();
+        }
+
+        async function loadFilaments(material) {
+            const filaments = await db.filaments.orderBy('createdAt').reverse().toArray();
+            const container = document.getElementById('filament-list');
+            
+            if (filaments.length === 0) {
+                container.innerHTML = '<div class="text-center text-gray-500 py-8">Keine Filamente vorhanden</div>';
+                return;
+            }
+            
+            container.innerHTML = filaments.map(f => `
+                <div class="bg-white p-4 rounded-xl shadow flex justify-between items-center">
+                    <div>
+                        <div class="font-bold">${f.brand} ${f.color}</div>
+                        <div class="text-sm text-gray-600">${f.material} · ${f.weight}g · ${f.diameter}mm</div>
+                        ${f.nozzleTemp ? `<div class="text-xs text-gray-500">${f.nozzleTemp}°C / ${f.bedTemp || '-'}°C Bed</div>` : ''}
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="showConsumeForm(${f.id})" class="bg-blue-100 text-blue-700 px-3 py-1 rounded text-sm">Verbrauchen</button>
+                        <button onclick="printLabel(${f.id})" class="bg-gray-100 text-gray-700 px-3 py-1 rounded text-sm">Etikett</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function filterMaterial(mat) {
+            loadFilaments(mat);
+        }
+
+        function showConsumeForm(id) {
+            document.getElementById('c-filament-id').value = id;
+            document.getElementById('consume-form').classList.remove('hidden');
+        }
+
+        function closeConsumeForm() {
+            document.getElementById('consume-form').classList.add('hidden');
+        }
+
+        async function saveConsume() {
+            const filamentId = parseInt(document.getElementById('c-filament-id').value);
+            const amount = parseInt(document.getElementById('c-amount').value);
+
+            if (!amount || amount <= 0) {
+                alert('Bitte gib einen gültigen Verbrauch ein');
+                return;
+            }
+
+            const filament = await db.filaments.get(filamentId);
+            if (!filament) return;
+
+            const newWeight = filament.weight - amount;
+            
+            if (newWeight <= 0) {
+                await db.filaments.delete(filamentId);
+            } else {
+                await db.filaments.update(filamentId, { weight: newWeight });
+            }
+
+            closeConsumeForm();
+            loadFilaments();
+        }
+
+        function showProjectForm() {
+            document.getElementById('project-form').classList.remove('hidden');
+        }
+
+        function closeProjectForm() {
+            document.getElementById('project-form').classList.add('hidden');
+        }
+
+        async function saveProject() {
+            const name = document.getElementById('p-name').value;
+            const filamentType = document.getElementById('p-filament').value;
+            const weightNeeded = parseInt(document.getElementById('p-weight').value);
+
+            if (!name || !weightNeeded) {
+                alert('Bitte Name und Gewicht angeben');
+                return;
+            }
+
+            await db.projects.add({
+                name,
+                filamentType,
+                weightNeeded,
+                createdAt: new Date()
+            });
+
+            closeProjectForm();
+            loadProjects();
+        }
+
+        async function loadProjects() {
+            const projects = await db.projects.orderBy('createdAt').reverse().toArray();
+            const container = document.getElementById('project-list');
+            
+            if (projects.length === 0) {
+                container.innerHTML = '<div class="text-center text-gray-500 py-8">Keine Projekte vorhanden</div>';
+                return;
+            }
+            
+            container.innerHTML = projects.map(p => `
+                <div class="bg-white p-4 rounded-xl shadow">
+                    <div class="font-bold">${p.name}</div>
+                    <div class="text-sm text-gray-600">${p.filamentType} · ${p.weightNeeded}g benötigt</div>
+                </div>
+            `).join('');
+        }
+
+        async function loadStats() {
+            const filaments = await db.filaments.toArray();
+            const total = filaments.length;
+            const totalWeight = filaments.reduce((sum, f) => sum + f.weight, 0);
+            
+            document.getElementById('stat-total').textContent = total;
+            document.getElementById('stat-weight').textContent = totalWeight + 'g';
+            
+            const byMaterial = {};
+            filaments.forEach(f => {
+                byMaterial[f.material] = (byMaterial[f.material] || 0) + 1;
+            });
+            
+            const materialsContainer = document.getElementById('stat-materials');
+            materialsContainer.innerHTML = Object.entries(byMaterial)
+                .sort((a, b) => b[1] - a[1])
+                .map(([mat, count]) => `
+                    <div class="flex justify-between items-center">
+                        <span>${mat}</span>
+                        <span class="font-medium">${count} Spulen</span>
+                    </div>
+                `).join('');
+        }
+
+        async function printLabel(id) {
+            const filament = await db.filaments.get(id);
+            if (!filament) return;
+            
+            const printArea = document.getElementById('print-area');
+            printArea.innerHTML = `
+                <div class="print-label">
+                    <div style="font-size: 10px; font-weight: bold;">${filament.brand} ${filament.color}</div>
+                    <div style="font-size: 8px;">${filament.material} · ${filament.weight}g</div>
+                    <div id="qrcode" style="margin-top: 2mm;"></div>
+                </div>
+            `;
+            
+            new QRCode(document.getElementById('qrcode'), {
+                text: filament.barcode,
+                width: 50,
+                height: 50
+            });
+            
+            setTimeout(() => window.print(), 100);
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadFilaments();
+        });
+    </script>
+    <script src="pwa-install.js"></script>
+</body>
+</html>
