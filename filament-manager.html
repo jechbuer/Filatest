@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#3b82f6">
+    <title>Filament Manager Pro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <script src="https://unpkg.com/dexie@3.2.4/dist/dexie.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        .glass { background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); }
+        .slide-up { animation: slideUp 0.3s ease-out; }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        .hidden-force { display: none !important; }
+        .print-label { 
+            width: 62mm; 
+            height: 29mm; 
+            border: 1px dashed #ccc; 
+            padding: 2mm;
+            page-break-after: always;
+        }
+        @media print {
+            body * { visibility: hidden; }
+            #print-area, #print-area * { visibility: visible; }
+            #print-area { position: absolute; left: 0; top: 0; }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen font-sans">
+
+    <!-- Navigation -->
+    <nav class="bg-blue-600 text-white p-4 sticky top-0 z-50 shadow-lg">
+        <div class="flex justify-between items-center max-w-2xl mx-auto">
+            <h1 class="text-xl font-bold flex items-center gap-2">
+                🧵 <span class="hidden sm:inline">Filament Manager</span>
+            </h1>
+            <div class="flex gap-2">
+                <button onclick="showTab('inventory')" class="px-3 py-1 rounded bg-blue-500 hover:bg-blue-400 text-sm">Lager</button>
+                <button onclick="showTab('projects')" class="px-3 py-1 rounded bg-blue-500 hover:bg-blue-400 text-sm">Projekte</button>
+                <button onclick="showTab('stats')" class="px-3 py-1 rounded bg-blue-500 hover:bg-blue-400 text-sm">Statistik</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Scanner Overlay -->
+    <div id="scanner-modal" class="fixed inset-0 bg-black z-50 hidden flex flex-col">
+        <div class="flex justify-between items-center p-4 bg-black text-white">
+            <h2 class="font-bold">Barcode scannen</h2>
+            <button onclick="stopScan()" class="text-2xl">✕</button>
+        </div>
+        <div id="reader" class="flex-1"></div>
+        <div class="p-4 bg-gray-900 text-white text-center text-sm">
+            Halte den Barcode in den Rahmen
+        </div>
+    </div>
+
+    <!-- Hauptbereich: Lager -->
+    <div id="tab-inventory" class="max-w-2xl mx-auto pb-24">
+        <!-- Action Buttons -->
+        <div class="p-4 grid grid-cols-2 gap-3">
+            <button onclick="startScan()" class="bg-blue-600 text-white p-4 rounded-xl shadow-lg flex flex-col items-center gap-1 active:scale-95 transition-transform">
+                <span class="text-2xl">📷</span>
+                <span class="font-medium">Scannen</span>
+            </button>
+            <button onclick="showAddForm()" class="bg-green-600 text-white p-4 rounded-xl shadow-lg flex flex-col items-center gap-1 active:scale-95 transition-transform">
+                <span class="text-2xl">➕</span>
+                <span class="font-medium">Manuell</span>
+            </button>
+        </div>
+
+        <!-- Filter -->
+        <div class="px-4 mb-4 flex gap-2 overflow-x-auto">
+            <button onclick="filterMaterial('all')" class="px-4 py-1 rounded-full bg-blue-100 text-blue-800 text-sm whitespace-nowrap font-medium">Alle</button>
+            <button onclick="filterMaterial('PLA')" class="px-4 py-1 rounded-full bg-gray-200 text-gray-700 text-sm whitespace-nowrap">PLA</button>
+            <button onclick="filterMaterial('PETG')" class="px-4 py-1 rounded-full bg-gray-200 text-gray-700 text-sm whitespace-nowrap">PETG</button>
+            <button onclick="filterMaterial('ABS')" class="px-4 py-1 rounded-full bg-gray-200 text-gray-700 text-sm whitespace-nowrap">ABS</button>
+        </div>
+
+        <!-- Filament List -->
+        <div id="filament-list" class="px-4 space-y-3"></div>
+    </div>
+
+    <!-- Hauptbereich: Projekte -->
+    <div id="tab-projects" class="max-w-2xl mx-auto pb-24 hidden">
+        <div class="p-4">
+            <button onclick="showProjectForm()" class="w-full bg-purple-600 text-white p-3 rounded-lg font-medium mb-4">
+                + Neues Projekt
+            </button>
+            <div id="project-list" class="space-y-3"></div>
+        </div>
+    </div>
+
+    <!-- Hauptbereich: Statistik -->
+    <div id="tab-stats" class="max-w-2xl mx-auto pb-24 hidden px-4 py-6">
+        <div class="grid grid-cols-2 gap-4 mb-6">
+            <div class="bg-white p-4 rounded-xl shadow">
+                <div class="text-gray-500 text-sm">Gesamt Spulen</div>
+                <div class="text-3xl font-bold text-blue-600" id="stat-total">0</div>
+            </div>
+            <div class="bg-white p-4 rounded-xl shadow">
+                <div class="text-gray-500 text-sm">Gesamtgewicht</div>
+                <div class="text-3xl font-bold text-green-600" id="stat-weight">0g</div>
+            </div>
+        </div>
+        <div class="bg-white p-4 rounded-xl shadow">
+            <h3 class="font-bold mb-3">Material-Verteilung</h3>
+            <div id="stat-materials" class="space-y-2"></div>
+        </div>
+    </div>
+
+    <!-- Form: Neues Filament (mit Tara-Funktion) -->
+    <div id="add-form" class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
+        <div class="bg-white w-full max-w-lg rounded-t-2xl sm:rounded-2xl p-6 slide-up max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold">Neues Filament</h2>
+                <button onclick="closeAddForm()" class="text-gray-500 text-2xl">✕</button>
+            </div>
+
+            <div class="space-y-4">
+                <input type="hidden" id="f-barcode">
+                
+                <!-- Tara-Assistent -->
+                <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                    <h3 class="font-bold text-blue-900 mb-2 flex items-center gap-2">
+                        ⚖️ Gewichtserfassung mit Tara
+                    </h3>
+                    
+                    <div class="grid grid-cols-2 gap-2 mb-2">
+                        <button onclick="setSpoolType('plastic')" class="spool-type-btn bg-white border-2 border-blue-500 p-2 rounded text-sm font-medium" data-type="plastic">
+                            Kunststoff<br><span class="text-xs text-gray-500">~220g</span>
+                        </button>
+                        <button onclick="setSpoolType('cardboard')" class="spool-type-btn bg-white border-2 border-gray-300 p-2 rounded text-sm font-medium" data-type="cardboard">
+                            Pappe<br><span class="text-xs text-gray-500">~145g</span>
+                        </button>
+                    </div>
+
+                    <div class="mb-2">
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Hersteller (für genaues Tara)</label>
+                        <select id="f-brand-select" onchange="updateTara()" class="w-full border rounded p-2 text-sm">
+                            <option value="">-- Hersteller wählen --</option>
+                            <optgroup label="Standard (Kunststoff ~220g)">
+                                <option value="prusament" data-tara="201">Prusament (201g)</option>
+                                <option value="esun" data-tara="230">eSun (230g)</option>
+                                <option value="sunlu" data-tara="140">Sunlu (140g)</option>
+                                <option value="overture" data-tara="237">Overture (237g)</option>
+                            </optgroup>
+                            <optgroup label="Eco/Pappe (leicht)">
+                                <option value="polyterra" data-tara="139">PolyTerra (139g)</option>
+                                <option value="3djake_eco" data-tara="209">3DJake Eco (209g)</option>
+                                <option value="elegoo_card" data-tara="145">Elegoo Pappe (145g)</option>
+                            </optgroup>
+                            <option value="custom">Eigenes Gewicht...</option>
+                        </select>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700">Brutto (Spule + Filament)</label>
+                            <input type="number" id="f-gross-weight" oninput="calculateNet()" class="w-full border rounded p-2" placeholder="z.B. 1200">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700">Tara (Leerspule)</label>
+                            <input type="number" id="f-tara" oninput="calculateNet()" class="w-full border rounded p-2 bg-gray-50" value="220">
+                        </div>
+                    </div>
+                    <div class="mt-2 text-right font-bold text-lg text-blue-700">
+                        Netto: <span id="f-net-weight">0</span>g Filament
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Hersteller</label>
+                        <input type="text" id="f-brand" class="w-full border rounded p-2" placeholder="z.B. Prusament">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Material</label>
+                        <select id="f-material" class="w-full border rounded p-2">
+                            <option value="PLA">PLA</option>
+                            <option value="PETG">PETG</option>
+                            <option value="ABS">ABS</option>
+                            <option value="TPU">TPU</option>
+                            <option value="ASA">ASA</option>
+                            <option value="Nylon">Nylon</option>
+                            <option value="PC">PC</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Farbe</label>
+                        <input type="text" id="f-color" class="w-full border rounded p-2" placeholder="Galaxy Black">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Durchmesser</label>
+                        <select id="f-diameter" class="w-full border rounded p-2">
+                            <option value="1.75">1.75mm</option>
+                            <option value="2.85">2.85mm</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Nozzle (°C)</label>
+                        <input type="number" id="f-nozzle" class="w-full border rounded p-2" placeholder="210">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Bed (°C)</label>
+                        <input type="number" id="f-bed" class="w-full border rounded p-2" placeholder="60">
+                    </div>
+                </div>
+
+                <div class="flex gap-2 pt-2">
+                    <button onclick="closeAddForm()" class="flex-1 bg-gray-300 text-gray-700 py-2 rounded font-medium">Abbrechen</button>
+                    <button onclick="saveFilament()" class="flex-1 bg-blue-600 text-white py-2 rounded font-medium">Speichern</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Form: Verbrauch buchen -->
+    <div id="consume-form" class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
+        <div class="bg-white w-full max-w-lg rounded-t-2xl sm:rounded-2xl p-6 slide-up">
+            <h2 class="text-xl font-bold mb-4">Verbrauch buchen</h2>
+            <input type="hidden" id="c-filament-id">
+            
+            <div class="mb-4 p-3 bg-gray-100 rounded-lg">
+                <div class="font-bold" id="c-filament-info"></div>
+                <div class="text-sm text-gray-600">Aktueller Bestand: <span id="c-current-weight"></span>g</div>
+            </div>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Projekt</label>
+                    <select id="c-project" class="w-full border rounded p-2 mb-2">
+                        <option value="">-- Projekt wählen --</option>
+                    </select>
+                    <button onclick="quickAddProject()" class="text-sm text-blue-600 underline">+ Neues Projekt anlegen</button>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Verbrauch (g)</label>
+                    <div class="flex gap-2">
+                        <input type="number" id="c-amount" class="flex-1 border rounded p-2" placeholder="z.B. 50">
+                        <button onclick="setFullSpool()" class="px-3 bg-gray-200 rounded text-sm">Volle Spule</button>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Notiz (optional)</label>
+                    <input type="text" id="c-note" class="w-full border rounded p-2" placeholder="z.B. Druck: Benchy">
+                </div>
+
+                <div class="flex gap-2 pt-2">
+                    <button onclick="closeConsumeForm()" class="flex-1 bg-gray-300 text-gray-700 py-2 rounded">Abbrechen</button>
+                    <button onclick="saveConsumption()" class="flex-1 bg-orange-600 text-white py-2 rounded font-medium">Buchen</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Form: Projekt anlegen -->
+    <div id="project-form" class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
+        <div class="bg-white w-full max-w-lg rounded-t-2xl sm:rounded-2xl p-6 slide-up">
+            <h2 class="text-xl font-bold mb-4">Neues Projekt</h2>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Projektname</label>
+                    <input type="text" id="p-name" class="w-full border rounded p-2" placeholder="z.B. RC Auto">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Beschreibung</label>
+                    <textarea id="p-desc" class="w-full border rounded p-2" rows="2"></textarea>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="closeProjectForm()" class="flex-1 bg-gray-300 text-gray-700 py-2 rounded">Abbrechen</button>
+                    <button onclick="saveProject()" class="flex-1 bg-purple-600 text-white py-2 rounded">Anlegen</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- QR-Code Print Modal -->
+    <div id="print-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl p-6 max-w-sm w-full">
+            <h2 class="text-xl font-bold mb-4">Etikett drucken</h2>
+            <div id="qrcode" class="flex justify-center mb-4"></div>
+            <div class="text-center text-sm text-gray-600 mb-4" id="qr-filament-info"></div>
+            <div class="flex gap-2">
+                <button onclick="closePrintModal()" class="flex-1 bg-gray-300 text-gray-700 py-2 rounded">Schließen</button>
+                <button onclick="window.print()" class="flex-1 bg-blue-600 text-white py-2 rounded">🖨️ Drucken</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Print Area (hidden) -->
+    <div id="print-area" class="hidden-force">
+        <div class="print-label">
+            <div class="flex items-center justify-between h-full">
+                <div class="flex-1">
+                    <div class="font-bold text-lg" id="print-brand">Brand</div>
+                    <div class="text-sm" id="print-material">PLA</div>
+                    <div class="text-sm font-bold" id="print-color">Color</div>
+                    <div class="text-xs text-gray-500 mt-1" id="print-weight">1000g</div>
+                </div>
+                <div id="print-qr"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Datenbank Setup
+        const db = new Dexie("FilamentManager");
+        db.version(1).stores({
+            filaments: '++id, barcode, brand, material, color, weight, created',
+            projects: '++id, name, created',
+            consumption: '++id, filamentId, projectId, amount, date, note'
+        });
+
+        let currentFilter = 'all';
+        let html5QrCode = null;
+
+        // Tara-Datenbank (basierend auf Recherche)
+        const taraDB = {
+            'prusament': { name: 'Prusament', tara: 201, type: 'plastic' },
+            'esun': { name: 'eSun', tara: 230, type: 'plastic' },
+            'sunlu': { name: 'Sunlu', tara: 140, type: 'plastic' },
+            'overture': { name: 'Overture', tara: 237, type: 'plastic' },
+            'hatchbox': { name: 'Hatchbox', tara: 235, type: 'plastic' },
+            'polyterra': { name: 'PolyTerra', tara: 139, type: 'cardboard' },
+            '3djake_eco': { name: '3DJake Eco', tara: 209, type: 'cardboard' },
+            'elegoo_card': { name: 'Elegoo Cardboard', tara: 145, type: 'cardboard' },
+            'generic_plastic': { name: 'Standard Kunststoff', tara: 220, type: 'plastic' },
+            'generic_cardboard': { name: 'Standard Pappe', tara: 145, type: 'cardboard' }
+        };
+
+        // Tab Wechsel
+        function showTab(tab) {
+            ['inventory', 'projects', 'stats'].forEach(t => {
+                document.getElementById('tab-' + t).classList.add('hidden');
+            });
+            document.getElementById('tab-' + tab).classList.remove('hidden');
+            
+            if (tab === 'stats') loadStats();
+            if (tab === 'projects') loadProjects();
+            if (tab === 'inventory') loadFilaments();
+        }
+
+        // Scanner Funktionen
+        async function startScan() {
+            document.getElementById('scanner-modal').classList.remove('hidden');
+            html5QrCode = new Html5Qrcode("reader");
+            try {
+                await html5QrCode.start(
+                    { facingMode: "environment" },
+                    { fps: 10, qrbox: { width: 250, height: 250 } },
+                    (decodedText) => handleBarcode(decodedText),
+                    () => {}
+                );
+            } catch (err) {
+                alert("Kamera-Fehler: " + err);
+            }
+        }
+
+        async function stopScan() {
+            if (html5QrCode) {
+                await html5QrCode.stop();
+                document.getElementById('scanner-modal').classList.add('hidden');
+            }
+        }
+
+        async function handleBarcode(barcode) {
+            stopScan();
+            const existing = await db.filaments.where('barcode').equals(barcode).first();
+            
+            if (existing) {
+                showConsumeForm(existing.id);
+            } else {
+                docume
