@@ -1,0 +1,30 @@
+{
+  "name": "filament-manager-pro",
+  "version": "1.0.0",
+  "description": "Browser-based 3D printer filament manager with barcode scanning and inventory management",
+  "main": "index.html",
+  "scripts": {
+    "start": "npx serve .",
+    "dev": "npx serve . -p 8000",
+    "build": "echo 'No build step required - pure HTML/JS app'",
+    "test": "echo 'Tests not yet implemented'"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jechbuer/Filatest.git"
+  },
+  "keywords": [
+    "3d-printing",
+    "filament",
+    "inventory",
+    "barcode-scanner",
+    "pwa",
+    "web-app"
+  ],
+  "author": "jechbuer",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/jechbuer/Filatest/issues"
+  },
+  "homepage": "https://jechbuer.github.io/Filatest/"
+}

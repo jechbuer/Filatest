@@ -1,0 +1,15 @@
+# Enable GitHub Pages
+theme: minima
+
+# Configure GitHub Pages
+name: Filament Manager Pro
+description: Browser-based 3D printer filament manager
+show_downloads: true
+
+# Exclude files from GitHub Pages build
+exclude:
+  - package.json
+  - package-lock.json
+  - node_modules/
+  - .gitignore
+  - README.md
