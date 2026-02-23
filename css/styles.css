@@ -302,3 +302,39 @@ button:disabled {
 .toast-info {
     background: linear-gradient(135deg, #3b82f6, #2563eb);
 }
+
+/* Etiketten-Druck Styles */
+.label-preview {
+    background: white;
+    border: 1px dashed #ccc;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+@media print {
+    .label-preview {
+        border: none !important;
+        box-shadow: none !important;
+    }
+    
+    body {
+        background: white !important;
+    }
+}
+
+/* Niedriger Bestand Warnungen */
+.low-stock-warning {
+    animation: pulse-red 2s infinite;
+}
+
+@keyframes pulse-red {
+    0%, 100% { 
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+    }
+    50% { 
+        box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
+    }
+}
+
+.critical-stock {
+    animation: pulse-red 1s infinite;
+}

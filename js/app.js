@@ -4,6 +4,8 @@ import { filamentService } from './services/db.js';
 import { masterDataService } from './services/masterData.js';
 import { filamentDictionary } from './services/filamentDictionary.js';
 import { consumptionLogService } from './services/consumptionLog.js';
+import { labelPrinter } from './services/labelPrinter.js';
+import { lowStockAlert } from './services/lowStockAlert.js';
 import { 
     updateConnectionStatus, 
     showMessage, 
@@ -59,6 +61,9 @@ class FilamentApp {
             // UI initialisieren
             this.setupEventListeners();
             this.calculateNetto();
+            
+            // Niedrigen Bestand prüfen
+            this.checkLowStock();
             
             updateConnectionStatus('online');
             console.log('✅ App initialisiert');
@@ -339,6 +344,22 @@ class FilamentApp {
         }
     }
 
+    // Niedrigen Bestand prüfen
+    checkLowStock() {
+        if (this.filaments.length > 0) {
+            lowStockAlert.checkAllFilaments(this.filaments);
+        }
+    }
+
+    // Etikett drucken
+    printLabel(id) {
+        const filament = this.filaments.find(f => f.id === id);
+        if (!filament) return;
+        
+        labelPrinter.printLabel(filament);
+        soundPlayer.playSuccess();
+    }
+
     // Liste rendern (mit Filter und Suche)
     renderList() {
         let filtered = this.filaments;
@@ -383,7 +404,7 @@ class FilamentApp {
             }
         }
         
-        renderFilamentList(filtered);
+        renderFilamentList(filtered, 'filamentList', 'countBadge', lowStockAlert);
         
         // Suchergebnis-Info aktualisieren
         const searchInfo = document.getElementById('searchInfo');
@@ -599,6 +620,9 @@ class FilamentApp {
             this.loadConsumptionLog();
             this.loadProjectsForLogFilter();
         }
+        if (tab === 'settings') {
+            this.loadSettings();
+        }
     }
 
     // Statistiken laden
@@ -734,6 +758,22 @@ class FilamentApp {
             showMessage('✅ Log als CSV exportiert');
         } catch (error) {
             showMessage('Fehler beim Exportieren', true);
+        }
+    }
+
+    // Einstellungen laden
+    loadSettings() {
+        const container = document.getElementById('lowStockSettings');
+        if (container) {
+            container.innerHTML = lowStockAlert.renderSettings();
+            
+            // Event Listener für Threshold-Änderung
+            const thresholdInput = document.getElementById('lowStockThreshold');
+            if (thresholdInput) {
+                thresholdInput.addEventListener('change', (e) => {
+                    lowStockAlert.setThreshold(parseInt(e.target.value));
+                });
+            }
         }
     }
 

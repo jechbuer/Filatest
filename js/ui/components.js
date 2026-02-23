@@ -164,7 +164,7 @@ export function showMessage(message, isError = false, duration = 4000) {
 }
 
 // Filament-Liste rendern
-export function renderFilamentList(filaments, containerId = 'filamentList', countBadgeId = 'countBadge') {
+export function renderFilamentList(filaments, containerId = 'filamentList', countBadgeId = 'countBadge', lowStockAlert = null) {
     const container = document.getElementById(containerId);
     const countBadge = document.getElementById(countBadgeId);
     
@@ -184,8 +184,24 @@ export function renderFilamentList(filaments, containerId = 'filamentList', coun
         return;
     }
 
-    container.innerHTML = filaments.map(fil => `
-        <div class="filament-card glass rounded-xl p-4 border border-gray-700 relative overflow-hidden animate-in">
+    container.innerHTML = filaments.map(fil => {
+        // Niedriger Bestand Prüfung
+        let borderClass = 'border-gray-700';
+        let alertBadge = '';
+        
+        if (lowStockAlert && lowStockAlert.isLowStock(fil)) {
+            const isCritical = lowStockAlert.isCriticalStock(fil);
+            borderClass = isCritical ? 'border-red-500 ring-2 ring-red-500/30' : 'border-yellow-500';
+            alertBadge = `
+                <div class="absolute top-2 left-2 ${isCritical ? 'bg-red-500' : 'bg-yellow-500'} text-black text-xs font-bold px-2 py-1 rounded-full">
+                    ${isCritical ? '🔴 Kritisch' : '🟡 Wenig'}
+                </div>
+            `;
+        }
+        
+        return `
+        <div class="filament-card glass rounded-xl p-4 ${borderClass} border relative overflow-hidden animate-in">
+            ${alertBadge}
             <div class="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-blue-500/20 to-purple-500/20 rounded-bl-full -mr-4 -mt-4"></div>
             
             <div class="relative flex justify-between items-start">
@@ -215,6 +231,11 @@ export function renderFilamentList(filaments, containerId = 'filamentList', coun
                             class="text-gray-400 hover:text-orange-400 transition p-2" 
                             title="Verbrauch buchen">
                         📉
+                    </button>
+                    <button onclick="window.app.printLabel('${fil.id}')" 
+                            class="text-gray-400 hover:text-blue-400 transition p-2" 
+                            title="Etikett drucken">
+                        🏷️
                     </button>
                     <button onclick="window.app.deleteFilament('${fil.id}')" 
                             class="text-gray-400 hover:text-red-400 transition p-2" 
