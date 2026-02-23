@@ -410,5 +410,18 @@
     <script type="module" src="js/app.js"></script>
     
     <!-- Kein Service Worker - reine Online-App für bessere Performance -->
+    
+    <!-- Debug: Prüfen ob Module laden -->
+    <script>
+        window.addEventListener('error', (e) => {
+            console.error('❌ Globaler Fehler:', e.message);
+            alert('Fehler: ' + e.message);
+        });
+        
+        window.addEventListener('unhandledrejection', (e) => {
+            console.error('❌ Unhandled Promise Rejection:', e.reason);
+            alert('Promise Fehler: ' + e.reason);
+        });
+    </script>
 </body>
 </html>

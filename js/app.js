@@ -1,4 +1,6 @@
 // 🚀 Filatest Hauptanwendung
+console.log('📱 App Modul wird geladen...');
+
 import { initFirebase } from './config/firebase.js';
 import { filamentService } from './services/db.js';
 import { masterDataService } from './services/masterData.js';
@@ -64,12 +66,7 @@ class FilamentApp {
             // Filamente laden
             console.log('📦 Filamente laden...');
             await this.loadFilaments();
-            
-            // Echtzeit-Updates abonnieren
-            this.unsubscribe = filamentService.onSnapshot((filaments) => {
-                this.filaments = filaments;
-                this.renderList();
-            });
+            console.log('✅ Filamente geladen');
             
             // UI initialisieren
             this.setupEventListeners();
@@ -80,6 +77,12 @@ class FilamentApp {
             
             updateConnectionStatus('online');
             console.log('✅ App vollständig initialisiert');
+            
+            // Echtzeit-Updates abonnieren (nach Online-Status)
+            this.unsubscribe = filamentService.onSnapshot((filaments) => {
+                this.filaments = filaments;
+                this.renderList();
+            });
             
         } catch (error) {
             console.error('❌ Initialisierungsfehler:', error);
