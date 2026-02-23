@@ -1,0 +1,120 @@
+{
+  "product": {
+    "name": "Bambu TPU 95A",
+    "url": "https://eu.store.bambulab.com/de/products/tpu-filament",
+    "description": "Bambu TPU 95A is a flexible filament with excellent elasticity and abrasion resistance. Perfect for phone cases, gaskets, wearables, and impact-absorbing parts.",
+    "brand": "Bambu Lab",
+    "material": "TPU",
+    "hardness": "95A",
+    "diameter": "1.75mm",
+    "diameter_tolerance": "±0.05mm",
+    "weight": "1kg",
+    "color_count": 8,
+    "pricing": {
+      "currency": "EUR",
+      "region": "EU",
+      "single_roll": {
+        "price_regular": 34.99,
+        "price_sale": null
+      }
+    }
+  },
+  "features": [
+    "High elasticity and flexibility",
+    "Excellent abrasion resistance",
+    "Oil and grease resistant",
+    "Good chemical resistance",
+    "Shore hardness 95A",
+    "Easy to print for flexible filament",
+    "No heated bed required",
+    "Durable and long-lasting"
+  ],
+  "colors": [
+    {
+      "name": "Black",
+      "hex": "#1F2937",
+      "sku": "40102",
+      "sku_full": "A00-40102-1.75-1000-SPL",
+      "category": "Black"
+    },
+    {
+      "name": "White",
+      "hex": "#F9FAFB",
+      "sku": "40101",
+      "sku_full": "A00-40101-1.75-1000-SPL",
+      "category": "White"
+    },
+    {
+      "name": "Red",
+      "hex": "#EF4444",
+      "sku": "40200",
+      "sku_full": "A00-40200-1.75-1000-SPL",
+      "category": "Red"
+    },
+    {
+      "name": "Blue",
+      "hex": "#3B82F6",
+      "sku": "40600",
+      "sku_full": "A00-40600-1.75-1000-SPL",
+      "category": "Blue"
+    }
+  ],
+  "printing_settings": {
+    "nozzle_temperature": {
+      "min": 220,
+      "max": 240,
+      "unit": "°C"
+    },
+    "bed_temperature": {
+      "min": 25,
+      "max": 50,
+      "unit": "°C",
+      "note": "Optional"
+    },
+    "printing_speed": {
+      "max": 60,
+      "recommended_max": 40,
+      "unit": "mm/s"
+    },
+    "retraction": {
+      "recommended": false,
+      "notes": "Retraction may cause jams with flexible filament"
+    },
+    "flow_rate": {
+      "recommended": 100,
+      "unit": "%"
+    }
+  },
+  "physical_properties": {
+    "density": {
+      "value": 1.21,
+      "unit": "g/cm³"
+    },
+    "shore_hardness": {
+      "value": "95A"
+    },
+    "elongation_at_break": {
+      "value": 450,
+      "unit": "%"
+    }
+  },
+  "compatibility": {
+    "ams": {
+      "not_recommended": ["AMS", "AMS 2 Pro", "AMS HT"],
+      "notes": "Direct drive extruder recommended"
+    },
+    "extruder": {
+      "type": "direct_drive",
+      "notes": "Bowden extruders may have difficulty"
+    }
+  },
+  "rfid": {
+    "enabled": true
+  },
+  "metadata": {
+    "source_url": "https://eu.store.bambulab.com/de/products/tpu-filament",
+    "region": "EU/Germany",
+    "currency": "EUR",
+    "last_updated": "2026-02-23"
+  }
+}

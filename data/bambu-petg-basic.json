@@ -1,0 +1,158 @@
+{
+  "product": {
+    "name": "Bambu PETG Basic",
+    "url": "https://eu.store.bambulab.com/de/products/petg-basic-filament",
+    "description": "Bambu PETG Basic combines the ease of use of PLA with the durability of ABS. Perfect for functional parts, mechanical components, and outdoor applications.",
+    "brand": "Bambu Lab",
+    "material": "PETG",
+    "diameter": "1.75mm",
+    "diameter_tolerance": "±0.03mm",
+    "weight": "1kg",
+    "filament_length": "325m",
+    "color_count": 15,
+    "pricing": {
+      "currency": "EUR",
+      "region": "EU",
+      "single_roll": {
+        "price_regular": 24.99,
+        "price_sale": null
+      }
+    }
+  },
+  "features": [
+    "High durability and strength",
+    "Excellent layer adhesion",
+    "UV and weather resistant",
+    "Chemical resistant",
+    "Low warping and shrinkage",
+    "Transparent options available",
+    "Food safe options",
+    "Easy to print like PLA",
+    "Impact resistant",
+    "Water resistant"
+  ],
+  "colors": [
+    {
+      "name": "Clear",
+      "hex": "#E8F4F8",
+      "sku": "20100",
+      "sku_full": "A00-20100-1.75-1000-SPL",
+      "category": "Transparent"
+    },
+    {
+      "name": "White",
+      "hex": "#FFFFFF",
+      "sku": "20101",
+      "sku_full": "A00-20101-1.75-1000-SPL",
+      "category": "White"
+    },
+    {
+      "name": "Black",
+      "hex": "#1A1A1A",
+      "sku": "20102",
+      "sku_full": "A00-20102-1.75-1000-SPL",
+      "category": "Black"
+    },
+    {
+      "name": "Grey",
+      "hex": "#6B7280",
+      "sku": "20103",
+      "sku_full": "A00-20103-1.75-1000-SPL",
+      "category": "Grey"
+    },
+    {
+      "name": "Red",
+      "hex": "#DC2626",
+      "sku": "20200",
+      "sku_full": "A00-20200-1.75-1000-SPL",
+      "category": "Red"
+    },
+    {
+      "name": "Blue",
+      "hex": "#2563EB",
+      "sku": "20600",
+      "sku_full": "A00-20600-1.75-1000-SPL",
+      "category": "Blue"
+    },
+    {
+      "name": "Green",
+      "hex": "#16A34A",
+      "sku": "20500",
+      "sku_full": "A00-20500-1.75-1000-SPL",
+      "category": "Green"
+    },
+    {
+      "name": "Yellow",
+      "hex": "#FACC15",
+      "sku": "20400",
+      "sku_full": "A00-20400-1.75-1000-SPL",
+      "category": "Yellow"
+    },
+    {
+      "name": "Orange",
+      "hex": "#EA580C",
+      "sku": "20300",
+      "sku_full": "A00-20300-1.75-1000-SPL",
+      "category": "Orange"
+    },
+    {
+      "name": "Purple",
+      "hex": "#9333EA",
+      "sku": "20700",
+      "sku_full": "A00-20700-1.75-1000-SPL",
+      "category": "Purple"
+    }
+  ],
+  "printing_settings": {
+    "nozzle_temperature": {
+      "min": 230,
+      "max": 250,
+      "unit": "°C"
+    },
+    "bed_temperature": {
+      "min": 70,
+      "max": 80,
+      "unit": "°C"
+    },
+    "printing_speed": {
+      "max": 200,
+      "recommended_max": 150,
+      "unit": "mm/s"
+    },
+    "retraction": {
+      "min": 30,
+      "max": 50,
+      "unit": "mm"
+    },
+    "drying_settings": {
+      "temperature": 65,
+      "time": 8,
+      "unit": "hours"
+    }
+  },
+  "physical_properties": {
+    "density": {
+      "value": 1.27,
+      "unit": "g/cm³"
+    },
+    "glass_transition_temperature": {
+      "value": 75,
+      "unit": "°C"
+    }
+  },
+  "compatibility": {
+    "ams": {
+      "recommended": ["AMS", "AMS 2 Pro", "AMS HT"],
+      "notes": "Requires dry filament"
+    }
+  },
+  "rfid": {
+    "enabled": true
+  },
+  "metadata": {
+    "source_url": "https://eu.store.bambulab.com/de/products/petg-basic-filament",
+    "region": "EU/Germany",
+    "currency": "EUR",
+    "last_updated": "2026-02-23"
+  }
+}

@@ -2,7 +2,7 @@
 import { initFirebase } from './config/firebase.js';
 import { filamentService } from './services/db.js';
 import { masterDataService } from './services/masterData.js';
-import { bambuDictionary } from './services/bambuDictionary.js';
+import { filamentDictionary } from './services/filamentDictionary.js';
 import { 
     updateConnectionStatus, 
     showMessage, 
@@ -39,10 +39,10 @@ class FilamentApp {
             // Stammdaten laden
             await this.loadMasterData();
             
-            // Bambu Dictionary laden (optional)
-            await bambuDictionary.load();
-            if (bambuDictionary.loaded) {
-                this.setupBambuColorPicker();
+            // Filament Dictionary laden (optional)
+            await filamentDictionary.load();
+            if (filamentDictionary.loaded) {
+                this.setupFilamentColorPicker();
             }
             
             // Scanner initialisieren
@@ -69,21 +69,25 @@ class FilamentApp {
         }
     }
 
-    // Bambu Farbwähler einrichten
-    setupBambuColorPicker() {
+    // Filament Farbwähler einrichten
+    setupFilamentColorPicker() {
         const container = document.getElementById('bambuColors');
         const wrapper = document.getElementById('bambuColorPicker');
         const datalist = document.getElementById('colorSuggestions');
         
         if (!container || !wrapper) return;
         
-        const colors = bambuDictionary.getAllColors();
+        const colors = filamentDictionary.getColorsByMaterial('PLA');
         if (colors.length === 0) return;
         
         // Datalist für Autocomplete füllen
         if (datalist) {
-            datalist.innerHTML = colors.map(c => 
-                `<option value="${c.name}">${c.name} (${c.category})</option>`
+            const allColors = [];
+            filamentDictionary.getAvailableMaterials().forEach(mat => {
+                allColors.push(...filamentDictionary.getColorsByMaterial(mat));
+            });
+            datalist.innerHTML = allColors.slice(0, 50).map(c => 
+                `<option value="${c.name}">${c.name} (${c.material} - ${c.brand})</option>`
             ).join('');
         }
         
@@ -94,27 +98,27 @@ class FilamentApp {
                     class="w-8 h-8 rounded-full border-2 border-gray-600 hover:border-white hover:scale-110 transition shadow-lg"
                     style="background-color: ${color.hex};"
                     title="${color.name}"
-                    onclick="window.app.selectBambuColor('${color.name}', '${color.hex}')">
+                    onclick="window.app.selectDictionaryColor('${color.name}', '${color.hex}', 'PLA')">
             </button>
         `).join('');
         
         wrapper.classList.remove('hidden');
     }
 
-    // Bambu Farbe auswählen
-    selectBambuColor(name, hex) {
+    // Farbe aus Dictionary auswählen
+    selectDictionaryColor(name, hex, material = 'PLA') {
         const colorInput = document.getElementById('color');
         if (colorInput) {
             colorInput.value = name;
         }
         
-        // Material automatisch auf PLA setzen wenn Bambu
+        // Material automatisch setzen
         const materialSelect = document.getElementById('material');
-        if (materialSelect && !materialSelect.value) {
-            materialSelect.value = 'PLA';
+        if (materialSelect) {
+            materialSelect.value = material;
         }
         
-        // Hersteller auf Bambu Lab setzen
+        // Hersteller auf Bambu Lab setzen (wenn aus Dictionary)
         const manufacturerInput = document.getElementById('manufacturer');
         if (manufacturerInput && !manufacturerInput.value) {
             manufacturerInput.value = 'Bambu Lab';
@@ -158,11 +162,19 @@ class FilamentApp {
             brandSelect.addEventListener('change', () => this.updateTara());
         }
 
-        // Farb-Eingabe - Bambu Lookup
+        // Farb-Eingabe - Dictionary Lookup
         const colorInput = document.getElementById('color');
-        if (colorInput && bambuDictionary.loaded) {
+        if (colorInput && filamentDictionary.loaded) {
             colorInput.addEventListener('input', (e) => {
-                this.lookupBambuColor(e.target.value);
+                this.lookupDictionaryColor(e.target.value);
+            });
+        }
+
+        // Material-Select - Farben aktualisieren
+        const materialSelect = document.getElementById('material');
+        if (materialSelect) {
+            materialSelect.addEventListener('change', (e) => {
+                this.updateColorChips(e.target.value);
             });
         }
 
@@ -321,14 +333,14 @@ class FilamentApp {
                 );
             });
             
-            // Auch im Bambu Dictionary suchen und passende Farben hervorheben
-            if (bambuDictionary.loaded) {
-                const bambuColor = bambuDictionary.findByName(query);
-                if (bambuColor) {
+            // Auch im Filament Dictionary suchen und passende Farben hervorheben
+            if (filamentDictionary.loaded) {
+                const dictColor = filamentDictionary.findByName(query);
+                if (dictColor) {
                     // Zusätzlich nach dieser Farbe suchen
                     const additionalMatches = this.filaments.filter(f => 
                         !filtered.includes(f) && 
-                        f.Color?.toLowerCase() === bambuColor.name.toLowerCase()
+                        f.Color?.toLowerCase() === dictColor.name.toLowerCase()
                     );
                     filtered = [...filtered, ...additionalMatches];
                 }
@@ -431,15 +443,15 @@ class FilamentApp {
             return;
         }
         
-        // 2. Im Bambu Dictionary suchen
-        if (bambuDictionary.loaded) {
-            const color = bambuDictionary.parseBarcode(barcode);
+        // 2. Im Filament Dictionary suchen
+        if (filamentDictionary.loaded) {
+            const result = filamentDictionary.parseBarcode(barcode);
             
-            if (color) {
-                // Bambu Filament erkannt - Auto-fill
-                this.autoFillBambuData(color, barcode);
+            if (result) {
+                // Filament erkannt - Auto-fill
+                this.autoFillDictionaryData(result, barcode);
                 soundPlayer.playSuccess();
-                showMessage(`🎉 ${color.name} erkannt! Daten wurden ausgefüllt.`);
+                showMessage(`🎉 ${result.color.name} (${result.material}) erkannt! Daten wurden ausgefüllt.`);
                 return;
             }
         }
@@ -452,8 +464,9 @@ class FilamentApp {
         this.switchTab('add');
     }
 
-    // Bambu Daten automatisch ausfüllen
-    autoFillBambuData(color, barcode) {
+    // Dictionary Daten automatisch ausfüllen
+    autoFillDictionaryData(result, barcode) {
+        const { color, material, brand } = result;
         // Barcode speichern
         document.getElementById('barcode').value = barcode;
         
@@ -461,9 +474,9 @@ class FilamentApp {
         const colorInput = document.getElementById('color');
         if (colorInput) colorInput.value = color.name;
         
-        // Material auf PLA setzen
+        // Material setzen
         const materialSelect = document.getElementById('material');
-        if (materialSelect) materialSelect.value = 'PLA';
+        if (materialSelect && material) materialSelect.value = material;
         
         // Hersteller auf Bambu Lab setzen
         const manufacturerInput = document.getElementById('manufacturer');
@@ -474,14 +487,8 @@ class FilamentApp {
         
         // Farb-Chips hervorheben
         const chips = document.querySelectorAll('#bambuColors button');
-        chips.forEach(chip => {
-            if (chip.title === color.name) {
-                chip.classList.add('ring-2', 'ring-white', 'scale-125');
-                setTimeout(() => {
-                    chip.classList.remove('ring-2', 'ring-white', 'scale-125');
-                }, 2000);
-            }
-        });
+        // Material-spezifische Chips aktualisieren
+        this.updateColorChips(material);
     }
 
     // Daten exportieren
@@ -532,14 +539,17 @@ class FilamentApp {
         }
     }
 
-    // Bambu Farbe beim Tippen nachschlagen
-    lookupBambuColor(input) {
-        if (!bambuDictionary.loaded || !input || input.length < 2) return;
+    // Farbe beim Tippen nachschlagen
+    lookupDictionaryColor(input) {
+        if (!filamentDictionary.loaded || !input || input.length < 2) return;
         
-        const color = bambuDictionary.findByName(input);
+        const materialSelect = document.getElementById('material');
+        const material = materialSelect?.value;
+        
+        const color = filamentDictionary.findByName(input, material);
         if (color) {
             // Gefunden! Aber nur vorschlagen, nicht automatisch ausfüllen
-            console.log('🎨 Bambu Farbe gefunden:', color.name, color.hex);
+            console.log('🎨 Dictionary Farbe gefunden:', color.name, color.hex, color.material);
         }
     }
 

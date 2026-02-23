@@ -1,0 +1,131 @@
+{
+  "product": {
+    "name": "Bambu ABS",
+    "url": "https://eu.store.bambulab.com/de/products/abs-filament",
+    "description": "Bambu ABS offers excellent mechanical properties and heat resistance. Ideal for functional prototypes, automotive parts, and applications requiring durability.",
+    "brand": "Bambu Lab",
+    "material": "ABS",
+    "diameter": "1.75mm",
+    "diameter_tolerance": "±0.03mm",
+    "weight": "1kg",
+    "color_count": 12,
+    "pricing": {
+      "currency": "EUR",
+      "region": "EU",
+      "single_roll": {
+        "price_regular": 26.99,
+        "price_sale": null
+      }
+    }
+  },
+  "features": [
+    "High heat resistance up to 95°C",
+    "Excellent mechanical strength",
+    "Good impact resistance",
+    "Suitable for acetone smoothing",
+    "Low density - lightweight parts",
+    "Chemical resistant",
+    "Good electrical insulation",
+    "Dimensional stability"
+  ],
+  "colors": [
+    {
+      "name": "White",
+      "hex": "#F5F5F5",
+      "sku": "30101",
+      "sku_full": "A00-30101-1.75-1000-SPL",
+      "category": "White"
+    },
+    {
+      "name": "Black",
+      "hex": "#0D0D0D",
+      "sku": "30102",
+      "sku_full": "A00-30102-1.75-1000-SPL",
+      "category": "Black"
+    },
+    {
+      "name": "Grey",
+      "hex": "#4B5563",
+      "sku": "30103",
+      "sku_full": "A00-30103-1.75-1000-SPL",
+      "category": "Grey"
+    },
+    {
+      "name": "Red",
+      "hex": "#B91C1C",
+      "sku": "30200",
+      "sku_full": "A00-30200-1.75-1000-SPL",
+      "category": "Red"
+    },
+    {
+      "name": "Blue",
+      "hex": "#1E40AF",
+      "sku": "30600",
+      "sku_full": "A00-30600-1.75-1000-SPL",
+      "category": "Blue"
+    },
+    {
+      "name": "Yellow",
+      "hex": "#EAB308",
+      "sku": "30400",
+      "sku_full": "A00-30400-1.75-1000-SPL",
+      "category": "Yellow"
+    }
+  ],
+  "printing_settings": {
+    "nozzle_temperature": {
+      "min": 250,
+      "max": 270,
+      "unit": "°C"
+    },
+    "bed_temperature": {
+      "min": 90,
+      "max": 110,
+      "unit": "°C"
+    },
+    "chamber_temperature": {
+      "recommended": 50,
+      "unit": "°C"
+    },
+    "printing_speed": {
+      "max": 150,
+      "recommended_max": 100,
+      "unit": "mm/s"
+    },
+    "drying_settings": {
+      "temperature": 80,
+      "time": 4,
+      "unit": "hours"
+    }
+  },
+  "physical_properties": {
+    "density": {
+      "value": 1.04,
+      "unit": "g/cm³"
+    },
+    "heat_deflection_temperature": {
+      "value": 95,
+      "unit": "°C"
+    }
+  },
+  "compatibility": {
+    "ams": {
+      "recommended": ["AMS HT"],
+      "not_recommended": ["AMS", "AMS 2 Pro"],
+      "notes": "Requires heated chamber for best results"
+    },
+    "enclosure": {
+      "required": true,
+      "notes": "Recommended for consistent results"
+    }
+  },
+  "rfid": {
+    "enabled": true
+  },
+  "metadata": {
+    "source_url": "https://eu.store.bambulab.com/de/products/abs-filament",
+    "region": "EU/Germany",
+    "currency": "EUR",
+    "last_updated": "2026-02-23"
+  }
+}
