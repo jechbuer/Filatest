@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Filatest Test-Agent</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background: #0f172a; color: white; }
+        .test-pass { background: rgba(34, 197, 94, 0.2); border: 1px solid #22c55e; }
+        .test-fail { background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; }
+        .test-warn { background: rgba(234, 179, 8, 0.2); border: 1px solid #eab308; }
+        .test-run { background: rgba(59, 130, 246, 0.2); border: 1px solid #3b82f6; }
+    </style>
+</head>
+<body class="p-6 max-w-4xl mx-auto">
+    <header class="mb-8">
+        <h1 class="text-3xl font-bold mb-2">🧪 Filatest Test-Agent</h1>
+        <p class="text-gray-400">Automatische Funktionsprüfung für deine Firebase-Integration</p>
+    </header>
+
+    <!-- Firebase Config (gleiche wie in deiner App) -->
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyAJGvTa_gPsUjmvlzIzTt1Nca1uC5Uzn7xs",
+            authDomain: "filatest-9a091.firebaseapp.com",
+            projectId: "filatest-9a091",
+            storageBucket: "filatest-9a091.firebasestorage.app",
+            messagingSenderId: "179130030606",
+            appId: "1:179130030606:web:013d6d598645abdf6cfa5f"
+        };
+    </script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+    <div id="testResults" class="space-y-3">
+        <div class="p-4 rounded-lg test-run">
+            <div class="flex items-center gap-3">
+                <span class="animate-spin">⏳</span>
+                <span>Initialisiere Tests...</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-8 p-4 bg-gray-800 rounded-lg">
+        <h3 class="font-semibold mb-2">🎯 Manuelle Tests</h3>
+        <div class="space-y-2 text-sm">
+            <button onclick="createTestData()" class="bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded transition">
+                Test-Filament erstellen
+            </button>
+            <button onclick="cleanTestData()" class="bg-red-600 hover:bg-red-500 px-4 py-2 rounded transition ml-2">
+                Test-Daten löschen
+            </button>
+            <button onclick="stressTest()" class="bg-purple-600 hover:bg-purple-500 px-4 py-2 rounded transition ml-2">
+                Stress-Test (10 Einträge)
+            </button>
+        </div>
+    </div>
+
+    <div id="liveLog" class="mt-6 p-4 bg-gray-900 rounded-lg font-mono text-xs h-64 overflow-y-auto">
+        <div class="text-gray-500">> Test-Agent gestartet...</div>
+    </div>
+
+    <script>
+        const resultsDiv = document.getElementById('testResults');
+        const logDiv = document.getElementById('liveLog');
+        let db = null;
+        let tests = [];
+
+        function log(msg, type = 'info') {
+            const color = type === 'error' ? 'text-red-400' : type === 'success' ? 'text-green-400' : 'text-gray-400';
+            logDiv.innerHTML += `<div class="${color}">> ${new Date().toLocaleTimeString()}: ${msg}</div>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+            console.log(`[Test-Agent] ${msg}`);
+        }
+
+        function addTest(name, status, message = '') {
+            const div = document.createElement('div');
+            const statusClass = status === 'pass' ? 'test-pass' : status === 'fail' ? 'test-fail' : status === 'warn' ? 'test-warn' : 'test-run';
+            const icon = status === 'pass' ? '✅' : status === 'fail' ? '❌' : status === 'warn' ? '⚠️' : '⏳';
+            
+            div.className = `p-4 rounded-lg ${statusClass} flex justify-between items-center`;
+            div.innerHTML = `
+                <div class="flex items-center gap-3">
+                    <span>${icon}</span>
+                    <div>
+                        <div class="font-semibold">${name}</div>
+                        ${message ? `<div class="text-sm opacity-80">${message}</div>` : ''}
+                    </div>
+                </div>
+            `;
+            
+            // Ersetze "läuft" Einträge oder füge neu hinzu
+            const existing = Array.from(resultsDiv.children).find(el => el.textContent.includes(name) && el.textContent.includes('⏳'));
+            if (existing) {
+                existing.replaceWith(div);
+            } else {
+                resultsDiv.appendChild(div);
+            }
+        }
+
+        async function runTests() {
+            resultsDiv.innerHTML = '';
+            tests = [];
+
+            // Test 1: Firebase Initialisierung
+            addTest('Firebase Verbindung', 'running');
+            try {
+                firebase.initializeApp(firebaseConfig);
+                db = firebase.firestore();
+                log('Firebase initialisiert');
+                addTest('Firebase Verbindung', 'pass', 'API-Key akzeptiert');
+            } catch (e) {
+                log('Firebase Fehler: ' + e.message, 'error');
+                addTest('Firebase Verbindung', 'fail', e.message);
+                return; // Weitere Tests abbrechen
+            }
+
+            // Test 2: Firestore Zugriff (Lesen)
+            addTest('Firestore Lesezugriff', 'running');
+            try {
+                const snapshot = await db.collection('Filatest').limit(1).get();
+                log(`Lesezugriff OK - ${snapshot.size} Dokumente gefunden`);
+                addTest('Firestore Lesezugriff', 'pass', 'Berechtigungen OK');
+            } catch (e) {
+                log('Lesezugriff Fehler: ' + e.message, 'error');
+                addTest('Firestore Lesezugriff', 'fail', e.code + ': ' + e.message);
+            }
+
+            // Test 3: Firestore Schreibzugriff
+            addTest('Firestore Schreibzugriff', 'running');
+            const testId = 'test_' + Date.now();
+            try {
+                await db.collection('Filatest').doc(testId).set({
+                    Material: 'TEST',
+                    Color: 'Test-Farbe',
+                    Manufakturere: 'Test-Agent',
+                    Weightbrutto: 1000,
+                    Spoolwright: 250,
+                    Weightnetto: 750,
+                    Zimestamp: new Date().toISOString(),
+                    isTestData: true
+                });
+                log('Schreibzugriff OK - Test-Dokument erstellt');
+                addTest('Firestore Schreibzugriff', 'pass', 'Daten können gespeichert werden');
+                
+                // Aufräumen
+                await db.collection('Filatest').doc(testId).delete();
+                log('Test-Daten aufgeräumt');
+            } catch (e) {
+                log('Schreibzugriff Fehler: ' + e.message, 'error');
+                addTest('Firestore Schreibzugriff', 'fail', e.code + ': ' + e.message);
+                if (e.code === 'permission-denied') {
+                    addTest('🔧 Hinweis', 'warn', 'Firestore Regeln müssen auf "allow read, write: if true" gesetzt werden');
+                }
+            }
+
+            // Test 4: Datenstruktur prüfen
+            addTest('Datenstruktur', 'running');
+            try {
+                const snapshot = await db.collection('Filatest').limit(5).get();
+                let issues = [];
+                
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    if (!data.Material) issues.push(`Dokument ${doc.id}: Material fehlt`);
+                    if (!data.hasOwnProperty('Weightnetto')) issues.push(`Dokument ${doc.id}: Weightnetto fehlt`);
+                    if (!data.hasOwnProperty('Spoolwright')) issues.push(`Dokument ${doc.id}: Spoolwright (Tara) fehlt`);
+                });
+
+                if (issues.length === 0) {
+                    addTest('Datenstruktur', 'pass', 'Alle Pflichtfelder vorhanden');
+                } else {
+                    addTest('Datenstruktur', 'warn', issues.length + ' Probleme gefunden');
+                    log('Struktur-Probleme: ' + issues.join(', '), 'warn');
+                }
+            } catch (e) {
+                addTest('Datenstruktur', 'fail', e.message);
+            }
+
+            // Test 5: Echtzeit-Updates
+            addTest('Echtzeit-Updates', 'running');
+            try {
+                let receivedUpdate = false;
+                const unsubscribe = db.collection('Filatest').limit(1).onSnapshot(() => {
+                    receivedUpdate = true;
+                });
+                
+                // Warte 2 Sekunden auf Updates
+                await new Promise(r => setTimeout(r, 2000));
+                unsubscribe();
+                
+                if (receivedUpdate) {
+                    addTest('Echtzeit-Updates', 'pass', 'onSnapshot funktioniert');
+                } else {
+                    addTest('Echtzeit-Updates', 'warn', 'Keine Updates empfangen (keine Daten?)');
+                }
+            } catch (e) {
+                addTest('Echtzeit-Updates', 'fail', e.message);
+            }
+
+            // Zusammenfassung
+            const passed = document.querySelectorAll('.test-pass').length;
+            const failed = document.querySelectorAll('.test-fail').length;
+            const warnings = document.querySelectorAll('.test-warn').length;
+            
+            log(`\n=== TEST ABGESCHLOSSEN ===`);
+            log(`✅ Bestanden: ${passed}`);
+            log(`❌ Fehlgeschlagen: ${failed}`);
+            log(`⚠️ Warnungen: ${warnings}`);
+            
+            if (failed === 0) {
+                log('\n🎉 Alle kritischen Tests bestanden! Deine App sollte funktionieren.');
+            } else {
+                log('\n🔧 Bitte behebe die Fehler oben bevor du die App nutzt.', 'error');
+            }
+        }
+
+        // Manuelle Test-Funktionen
+        async function createTestData() {
+            log('Erstelle Test-Filament...');
+            try {
+                const doc = await db.collection('Filatest').add({
+                    Material: 'PLA',
+                    Color: 'Test-Rot',
+                    Manufakturere: 'Test-Agent',
+                    Weightbrutto: 1200,
+                    Spoolwright: 250,
+                    Weightnetto: 950,
+                    Zimestamp: new Date().toISOString(),
+                    isTestData: true
+                });
+                log(`✅ Test-Filament erstellt: ${doc.id}`, 'success');
+                alert('Test-Filament erstellt! Prüfe deine App - es sollte sofort erscheinen.');
+            } catch (e) {
+                log('❌ Fehler: ' + e.message, 'error');
+                alert('Fehler: ' + e.message);
+            }
+        }
+
+        async function cleanTestData() {
+            log('Lösche Test-Daten...');
+            try {
+                const snapshot = await db.collection('Filatest').where('isTestData', '==', true).get();
+                let count = 0;
+                snapshot.forEach(async doc => {
+                    await doc.ref.delete();
+                    count++;
+                });
+                log(`🗑️ ${count} Test-Datensätze gelöscht`, 'success');
+                alert(`${count} Test-Daten gelöscht`);
+            } catch (e) {
+                log('❌ Fehler: ' + e.message, 'error');
+            }
+        }
+
+        async function stressTest() {
+            log('Starte Stress-Test mit 10 Einträgen...');
+            const promises = [];
+            for (let i = 0; i < 10; i++) {
+                promises.push(db.collection('Filatest').add({
+                    Material: ['PLA', 'PETG', 'ABS'][Math.floor(Math.random() * 3)],
+                    Color: `Stress-Test-${i}`,
+                    Manufakturere: 'Test-Agent',
+                    Weightbrutto: 1000 + Math.random() * 500,
+                    Spoolwright: 250,
+                    Weightnetto: 750 + Math.random() * 500,
+                    Zimestamp: new Date().toISOString(),
+                    isTestData: true
+                }));
+            }
+            try {
+                await Promise.all(promises);
+                log('✅ 10 Test-Einträge erstellt', 'success');
+                alert('Stress-Test abgeschlossen - 10 Einträge erstellt!');
+            } catch (e) {
+                log('❌ Stress-Test fehlgeschlagen: ' + e.message, 'error');
+            }
+        }
+
+        // Starte Tests automatisch
+        setTimeout(runTests, 1000);
+    </script>
+</body>
+</html>
