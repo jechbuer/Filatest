@@ -118,10 +118,13 @@ export const soundPlayer = new SoundPlayer();
 
 // Status-Badge aktualisieren
 export function updateConnectionStatus(mode, text = null) {
-    const indicator = document.querySelector('#connectionStatus span:first-child');
+    const connectionStatus = document.getElementById('connectionStatus');
     const statusText = document.getElementById('statusText');
     
-    if (!indicator || !statusText) return;
+    if (!connectionStatus) return;
+    
+    // Finde den Indicator (erstes Span-Element im connectionStatus)
+    const indicator = connectionStatus.querySelector('span:first-child');
     
     const texts = {
         online: 'Cloud',
@@ -139,8 +142,18 @@ export function updateConnectionStatus(mode, text = null) {
         connecting: 'bg-yellow-500'
     };
     
-    indicator.className = `w-2 h-2 rounded-full ${colors[mode] || colors.offline} ${mode === 'connecting' || mode === 'sync' ? 'animate-pulse' : ''}`;
-    statusText.textContent = text || texts[mode] || mode;
+    // Indicator aktualisieren (nur wenn gefunden)
+    if (indicator) {
+        const baseClasses = 'w-1.5 h-1.5 rounded-full';
+        const colorClass = colors[mode] || colors.offline;
+        const pulseClass = (mode === 'connecting' || mode === 'sync') ? 'animate-pulse' : '';
+        indicator.className = `${baseClasses} ${colorClass} ${pulseClass}`.trim();
+    }
+    
+    // Text aktualisieren
+    if (statusText) {
+        statusText.textContent = text || texts[mode] || mode;
+    }
 }
 
 // Nachricht anzeigen

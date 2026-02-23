@@ -34,26 +34,38 @@ class FilamentApp {
 
     // App initialisieren
     async init() {
+        console.log('🚀 App Initialisierung startet...');
+        
         try {
             updateConnectionStatus('connecting');
+            console.log('⏳ Verbindung wird hergestellt...');
             
             // Firebase initialisieren
+            console.log('🔥 Firebase initialisieren...');
             await initFirebase();
+            console.log('✅ Firebase OK');
             
             // Stammdaten laden
+            console.log('📚 Stammdaten laden...');
             await this.loadMasterData();
+            console.log('✅ Stammdaten OK');
             
             // Filament Dictionary laden (optional)
+            console.log('📖 Dictionary laden...');
             await filamentDictionary.load();
             if (filamentDictionary.loaded) {
                 this.setupFilamentColorPicker();
+                console.log('✅ Dictionary OK');
             }
             
             // Scanner initialisieren
             this.scanner = new BarcodeScanner((barcode) => this.handleBarcodeScan(barcode));
             
-            // Filamente laden und Echtzeit-Updates abonnieren
-            this.loadFilaments();
+            // Filamente laden
+            console.log('📦 Filamente laden...');
+            await this.loadFilaments();
+            
+            // Echtzeit-Updates abonnieren
             this.unsubscribe = filamentService.onSnapshot((filaments) => {
                 this.filaments = filaments;
                 this.renderList();
@@ -67,12 +79,17 @@ class FilamentApp {
             this.checkLowStock();
             
             updateConnectionStatus('online');
-            console.log('✅ App initialisiert');
+            console.log('✅ App vollständig initialisiert');
             
         } catch (error) {
             console.error('❌ Initialisierungsfehler:', error);
+            console.error('Stack:', error.stack);
             updateConnectionStatus('error');
-            showMessage('Fehler beim Verbinden: ' + error.message, true);
+            showMessage('❌ Verbindungsfehler: ' + error.message, true);
+            
+            // Trotzdem versuchen die UI zu initialisieren
+            this.setupEventListeners();
+            this.calculateNetto();
         }
     }
 

@@ -16,9 +16,20 @@ let firebaseInitialized = false;
 async function initFirebase() {
     if (firebaseInitialized) return db;
     
+    // Prüfen ob Firebase geladen ist
+    if (typeof firebase === 'undefined') {
+        console.error('Firebase nicht geladen! Skript fehlt?');
+        throw new Error('Firebase nicht verfügbar');
+    }
+    
     try {
+        console.log('Firebase Initialisierung...');
         firebase.initializeApp(firebaseConfig);
         db = firebase.firestore();
+        
+        // Verbindung testen
+        await db.collection('Filatest').limit(1).get();
+        
         firebaseInitialized = true;
         console.log('✅ Firebase verbunden');
         return db;
