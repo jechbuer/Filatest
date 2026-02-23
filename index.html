@@ -409,19 +409,23 @@
     <!-- Haupt-App Script -->
     <script type="module" src="js/app.js"></script>
     
-    <!-- Kein Service Worker - reine Online-App für bessere Performance -->
-    
-    <!-- Debug: Prüfen ob Module laden -->
+    <!-- Service Worker nur zum Cache-Clearing -->
     <script>
-        window.addEventListener('error', (e) => {
-            console.error('❌ Globaler Fehler:', e.message);
-            alert('Fehler: ' + e.message);
-        });
-        
-        window.addEventListener('unhandledrejection', (e) => {
-            console.error('❌ Unhandled Promise Rejection:', e.reason);
-            alert('Promise Fehler: ' + e.reason);
-        });
+        // Alten Service Worker & Cache löschen
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then((regs) => {
+                for (let reg of regs) {
+                    reg.unregister();
+                    console.log('SW unregistered');
+                }
+            });
+            caches.keys().then((names) => {
+                for (let name of names) {
+                    caches.delete(name);
+                    console.log('Cache deleted:', name);
+                }
+            });
+        }
     </script>
 </body>
 </html>
