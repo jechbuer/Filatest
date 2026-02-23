@@ -607,8 +607,10 @@ class FilamentApp {
         document.querySelectorAll('.tab-btn').forEach(btn => {
             if (btn.dataset.tab === tab) {
                 btn.classList.add('active');
+                btn.classList.remove('text-gray-300', 'hover:bg-gray-800/50');
             } else {
                 btn.classList.remove('active');
+                btn.classList.add('text-gray-300', 'hover:bg-gray-800/50');
             }
         });
         
