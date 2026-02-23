@@ -226,7 +226,7 @@ class FilamentApp {
         // Tab-Navigation
         document.querySelectorAll('.tab-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
-                const tab = e.target.dataset.tab;
+                const tab = e.currentTarget.dataset.tab;
                 this.switchTab(tab);
             });
         });
@@ -251,7 +251,7 @@ class FilamentApp {
         // Filter Buttons
         document.querySelectorAll('.filter-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
-                const filter = e.target.dataset.filter;
+                const filter = e.currentTarget.dataset.filter;
                 this.setFilter(filter);
             });
         });
