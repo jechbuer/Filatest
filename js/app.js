@@ -19,7 +19,7 @@ import {
     showConsumeModal,
     setButtonLoading,
     soundPlayer
-} from './ui/components-v2.js';
+} from './ui/components.js';
 import { BarcodeScanner } from './ui/scanner.js';
 
 class FilamentApp {
