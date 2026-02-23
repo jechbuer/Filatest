@@ -1,16 +1,18 @@
-# 🧵 Filament Manager Pro
+# 🧵 Filatest Pro
 
-Ein browserbasierter 3D-Drucker Filament Manager mit Barcode-Scanning, Lager-Verwaltung und Projekt-Tracking.
+Ein browserbasierter 3D-Drucker Filament Manager mit Cloud-Synchronisation, Barcode-Scanning und Lager-Verwaltung.
 
 ## ✨ Features
 
+- ☁️ **Cloud-Sync** - Daten werden in Firebase gespeichert (geräteübergreifend)
 - 📷 **Barcode-Scanning** - Per Kamera direkt im Browser
 - 📦 **Lager-Verwaltung** - Verwalte deine Filament-Spulen
 - 📊 **Statistiken** - Verbrauch, Material-Übersicht
 - 📱 **Mobile-First** - Optimiert für Smartphone/Tablet
 - 🏷️ **Etiketten-Druck** - QR-Code Etiketten für Spulen
-- 💾 **Offline-First** - Daten werden lokal im Browser gespeichert (IndexedDB)
-- 🔍 **Filter & Suche** - Nach Material, Hersteller, Farbe
+- 💾 **Offline-First** - Funktioniert auch ohne Internet
+- 🔍 **Filter** - Nach Material filtern
+- ⚖️ **Tara-Assistent** - Automatische Tara-Berechnung für verschiedene Hersteller
 
 ## 🚀 Schnellstart
 
@@ -41,48 +43,96 @@ Dann im Browser öffnen: `http://localhost:8000`
 
 ### Filament hinzufügen
 
-1. Klicke auf **"Scannen"** um einen Barcode zu scannen
-2. Oder **"Manuell"** um Daten einzugeben
-3. Material, Farbe, Gewicht und Hersteller eintragen
-4. Speichern
+1. Klicke auf **"➕ Neues Filament"**
+2. Hersteller auswählen (Tara wird automatisch gesetzt)
+3. Material und Farbe eingeben
+4. Brutto-Gewicht (Spule + Filament) eingeben
+5. Netto-Gewicht wird automatisch berechnet
+6. **"In Cloud speichern"** klicken
 
-### Projekt anlegen
+### Verbrauch buchen
 
-1. Wechsle zum Tab **"Projekte"**
-2. Klicke auf **"+ Neues Projekt"**
-3. Projekt-Details und benötigtes Material eintragen
-4. Das System berechnet automatisch ob genug Filament vorhanden ist
+1. Bei einer Spule auf **"📉"** (Verbrauch) klicken
+2. Verbrauchte Menge eingeben
+3. Optional: Notiz hinzufügen
+4. **"Buchen"** klicken
 
-### Etiketten drucken
+### Barcode scannen
 
-1. Bei einer Spule auf **"Etikett"** klicken
-2. QR-Code wird generiert
-3. Drucken (optimiert für 62x29mm Etiketten)
+1. **"📷 Scan"** Button klicken
+2. Barcode/QR-Code in den Rahmen halten
+3. Automatisch wird das Filament gefunden oder ein neues angelegt
+
+### Backup erstellen
+
+1. Oben rechts auf **"💾"** (Backup) klicken
+2. JSON-Datei wird heruntergeladen
 
 ## 🛠️ Technologien
 
 - **HTML5** - Struktur & Semantik
 - **Tailwind CSS** - Styling (via CDN)
-- **Dexie.js** - IndexedDB Wrapper für lokale Speicherung
+- **Firebase** - Cloud-Datenbank & Echtzeit-Sync
+- **Dexie.js** - Lokale IndexedDB (Offline-Support)
 - **html5-qrcode** - Barcode/QR-Code Scanning
 - **QRCode.js** - QR-Code Generierung
+
+## 📁 Projektstruktur
+
+```
+Filatest/
+├── index.html              # Haupt-HTML
+├── css/
+│   └── styles.css          # Styles
+├── js/
+│   ├── config/
+│   │   ├── firebase.js     # Firebase Config
+│   │   └── constants.js    # Konstanten
+│   ├── services/
+│   │   ├── db.js           # Filament-Service
+│   │   └── masterData.js   # Stammdaten-Service
+│   ├── ui/
+│   │   ├── components.js   # UI-Komponenten
+│   │   └── scanner.js      # Barcode Scanner
+│   └── app.js              # Hauptanwendung
+├── manifest.json           # PWA Manifest
+├── sw.js                   # Service Worker
+└── pwa-install.js          # PWA Installations-Logik
+```
+
+## 🔥 Firebase Einrichtung
+
+Die App verwendet Firebase für die Datenspeicherung:
+
+1. Firebase Projekt erstellen: https://console.firebase.google.com
+2. Firestore-Datenbank aktivieren
+3. Firebase Config in `js/config/firebase.js` eintragen
+
+### Firebase Collections
+
+- **Filatest** - Filament-Daten
+- **Materials** - Material-Stammdaten
+- **Brands** - Hersteller-Stammdaten
+- **SpoolTypes** - Spulentypen
 
 ## 📱 Browser-Unterstützung
 
 - ✅ Chrome/Edge (empfohlen)
 - ✅ Firefox
 - ✅ Safari (iOS)
+- ✅ Chrome (Android)
 - ⚠️ Barcode-Scanning benötigt Kamera-Zugriff
 
 ## 🔒 Datenschutz
 
-Alle Daten werden **lokal in deinem Browser** gespeichert (IndexedDB). Keine Daten werden an Server übertragen.
+- Alle Daten werden in **Firebase Firestore** gespeichert
+- Daten sind nur für dich sichtbar (Firestore Security Rules)
+- Keine Weitergabe an Dritte
 
 ## 📝 Backup & Restore
 
-Daten können exportiert/importiert werden:
-- **Export**: Einstellungen → "Daten exportieren" (JSON)
-- **Import**: Einstellungen → "Daten importieren"
+- **Export**: Backup-Button klicken → JSON-Datei wird heruntergeladen
+- **Wiederherstellen**: Aktuell manuell über Firebase Console
 
 ## 🐛 Bekannte Probleme
 
@@ -91,10 +141,13 @@ Daten können exportiert/importiert werden:
 
 ## 🔮 Roadmap
 
-- [ ] Multi-User Support (lokale Benutzer)
-- [ ] Cloud-Sync (optional)
-- [ ] Filament-Preis-Tracking
-- [ ] Verbrauchs-Prognosen
+- [ ] Authentifizierung (Benutzer-Login)
+- [ ] Mehrere Benutzer/Teams
+- [ ] Projekt-Verwaltung
+- [ ] Verbrauchs-Historie
+- [ ] Niedriger-Bestand Warnungen
+- [ ] Material-Profile für Drucker
+- [ ] Preis-Tracking
 - [ ] Integration mit OctoPrint
 
 ## 📄 Lizenz

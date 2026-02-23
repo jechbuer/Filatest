@@ -3,300 +3,282 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#3b82f6">
+    <meta name="description" content="3D-Drucker Filament Manager mit Cloud-Sync">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Filatest">
+    
     <title>Filatest Pro</title>
+    
+    <!-- Styles -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
-    <style>
-        body { font-family: 'Inter', sans-serif; background: #0f172a; }
-        .glass { background: rgba(30, 41, 59, 0.8); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
-        .gradient-text { background: linear-gradient(135deg, #60a5fa, #a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .filament-card { transition: all 0.3s ease; }
-        .filament-card:hover { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
-        @keyframes slideIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        .animate-in { animation: slideIn 0.4s ease-out; }
-    </style>
+    <link rel="stylesheet" href="css/styles.css">
+    
     <!-- Firebase -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    
+    <!-- QR Code Scanner & Generator -->
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    
+    <!-- Manifest -->
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192x192.png">
+    <link rel="apple-touch-icon" sizes="192x192" href="icons/icon-192x192.png">
 </head>
-<body class="text-gray-100 min-h-screen pb-20">
+<body class="text-gray-100">
 
     <!-- Header -->
     <header class="sticky top-0 z-50 glass border-b border-gray-700">
-        <div class="max-w-4xl mx-auto px-4 py-4 flex justify-between items-center">
-            <div class="flex items-center gap-3">
-                <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center text-xl">🧵</div>
-                <div>
-                    <h1 class="text-xl font-bold gradient-text">Filatest</h1>
-                    <p class="text-xs text-gray-400">Cloud Sync Aktiv</p>
+        <div class="max-w-4xl mx-auto px-4 py-4">
+            <div class="flex justify-between items-center">
+                <!-- Logo -->
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center text-xl shadow-lg">
+                        🧵
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-bold gradient-text">Filatest</h1>
+                        <p class="text-xs text-gray-400">Cloud Sync Aktiv</p>
+                    </div>
+                </div>
+                
+                <!-- Status & Aktionen -->
+                <div class="flex items-center gap-2">
+                    <span id="connectionStatus" class="text-xs px-3 py-1 rounded-full bg-gray-700 text-gray-300 flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-yellow-500 animate-pulse"></span>
+                        <span id="statusText">Verbinde...</span>
+                    </span>
+                    <button id="exportBtn" class="p-2 hover:bg-gray-700 rounded-lg transition tooltip" data-tooltip="Backup" title="Backup">
+                        💾
+                    </button>
                 </div>
             </div>
-            <div class="flex items-center gap-2">
-                <span id="connectionStatus" class="text-xs px-3 py-1 rounded-full bg-gray-700 text-gray-300 flex items-center gap-2">
-                    <span class="w-2 h-2 rounded-full bg-yellow-500 animate-pulse"></span>
-                    <span id="statusText">Verbinde...</span>
-                </span>
-                <button onclick="exportData()" class="p-2 hover:bg-gray-700 rounded-lg transition" title="Backup">💾</button>
+            
+            <!-- Tab Navigation -->
+            <div class="flex gap-1 mt-4 -mb-4">
+                <button data-tab="inventory" class="tab-btn active flex-1 py-2 text-sm font-medium text-gray-300 hover:text-white transition">
+                    📦 Lager
+                </button>
+                <button data-tab="stats" class="tab-btn flex-1 py-2 text-sm font-medium text-gray-300 hover:text-white transition">
+                    📊 Statistik
+                </button>
+                <button data-tab="settings" class="tab-btn flex-1 py-2 text-sm font-medium text-gray-300 hover:text-white transition">
+                    ⚙️ Einstellungen
+                </button>
             </div>
         </div>
     </header>
 
     <!-- Hauptbereich -->
-    <main class="max-w-4xl mx-auto px-4 mt-6 grid md:grid-cols-2 gap-6">
+    <main class="max-w-4xl mx-auto px-4 mt-8">
         
-        <!-- Formular -->
-        <section class="glass rounded-2xl p-6 animate-in">
-            <h2 class="text-lg font-semibold mb-4 flex items-center gap-2">
-                <span class="text-2xl">➕</span> Neues Filament
-            </h2>
-            
-            <form id="filamentForm" class="space-y-4" onsubmit="event.preventDefault(); saveFilament();">
-                <div class="grid grid-cols-2 gap-3">
-                    <div class="col-span-2">
-                        <label class="block text-xs text-gray-400 mb-1">Material</label>
-                        <select id="material" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white focus:border-blue-500 transition" required>
-                            <option value="">Wählen...</option>
-                            <option value="PLA">PLA</option>
-                            <option value="PETG">PETG</option>
-                            <option value="ABS">ABS</option>
-                            <option value="TPU">TPU</option>
-                            <option value="ASA">ASA</option>
-                        </select>
-                    </div>
-                    
-                    <div>
-                        <label class="block text-xs text-gray-400 mb-1">Farbe</label>
-                        <input type="text" id="color" placeholder="z.B. Rot" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 focus:border-blue-500 transition" required>
-                    </div>
-                    
-                    <div>
-                        <label class="block text-xs text-gray-400 mb-1">Hersteller</label>
-                        <input type="text" id="manufacturer" placeholder="z.B. Prusament" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 focus:border-blue-500 transition">
-                    </div>
-                </div>
-
-                <!-- Tara-Berechnung -->
-                <div class="bg-gray-800/50 rounded-xl p-4 border border-gray-700">
-                    <h3 class="text-sm font-medium text-gray-300 mb-3">⚖️ Gewichtsberechnung</h3>
-                    
-                    <div class="grid grid-cols-2 gap-3 mb-3">
-                        <div>
-                            <label class="block text-xs text-gray-500 mb-1">Brutto (gesamt)</label>
-                            <input type="number" id="brutto" placeholder="1200" class="w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-right focus:border-blue-500 transition" oninput="calculateNetto()" required>
-                        </div>
-                        <div>
-                            <label class="block text-xs text-gray-500 mb-1">Tara (Leerspule)</label>
-                            <input type="number" id="tara" value="250" class="w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-right focus:border-blue-500 transition" oninput="calculateNetto()">
-                        </div>
-                    </div>
-                    
-                    <div class="flex justify-between items-center bg-gray-900 rounded-lg p-3 border border-gray-700">
-                        <span class="text-sm text-gray-400">Verfügbar:</span>
-                        <span class="text-2xl font-bold text-green-400"><span id="nettoAnzeige">0</span>g</span>
-                    </div>
-                </div>
-
-                <button type="submit" id="saveBtn" class="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-semibold py-3 rounded-xl shadow-lg shadow-blue-500/30 transition transform active:scale-95">
-                    💾 In Cloud speichern
-                </button>
+        <!-- TAB: Lagerbestand -->
+        <div id="tab-inventory" class="tab-content">
+            <div class="grid md:grid-cols-2 gap-6">
                 
-                <div id="errorMsg" class="hidden bg-red-900/50 border border-red-700 text-red-200 px-4 py-3 rounded-lg text-sm"></div>
-                <div id="successMsg" class="hidden bg-green-900/50 border border-green-700 text-green-200 px-4 py-3 rounded-lg text-sm"></div>
-            </form>
-        </section>
+                <!-- Formular -->
+                <section class="glass rounded-2xl p-6 animate-in">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-lg font-semibold flex items-center gap-2">
+                            <span class="text-2xl">➕</span> Neues Filament
+                        </h2>
+                        <button id="scanBtn" class="p-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-sm transition" title="Barcode scannen">
+                            📷 Scan
+                        </button>
+                    </div>
+                    
+                    <form id="filamentForm" class="space-y-4">
+                        <!-- Barcode (optional) -->
+                        <input type="hidden" id="barcode">
+                        
+                        <!-- Hersteller -->
+                        <div>
+                            <label class="block text-xs text-gray-400 mb-1">Hersteller</label>
+                            <select id="f-brand-select" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white focus:border-blue-500 transition">
+                                <option value="">-- Hersteller wählen --</option>
+                                <optgroup label="Kunststoffspulen">
+                                    <option value="prusament" data-tara="201">Prusament (201g)</option>
+                                    <option value="esun" data-tara="230">eSun (230g)</option>
+                                    <option value="sunlu" data-tara="140">Sunlu (140g)</option>
+                                    <option value="overture" data-tara="237">Overture (237g)</option>
+                                    <option value="hatchbox" data-tara="235">Hatchbox (235g)</option>
+                                </optgroup>
+                                <optgroup label="Papp-Spulen (Eco)">
+                                    <option value="polyterra" data-tara="139">PolyTerra (139g)</option>
+                                    <option value="3djake_eco" data-tara="209">3DJake Eco (209g)</option>
+                                    <option value="elegoo_card" data-tara="145">Elegoo Pappe (145g)</option>
+                                </optgroup>
+                                <option value="custom">Eigenes Gewicht...</option>
+                            </select>
+                            <input type="text" id="manufacturer" placeholder="Herstellername (optional)" 
+                                   class="w-full mt-2 bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-sm text-white focus:border-blue-500 transition">
+                        </div>
 
-        <!-- Liste -->
-        <section class="space-y-4">
-            <div class="flex justify-between items-center mb-2">
-                <h2 class="text-lg font-semibold flex items-center gap-2">
-                    <span class="text-2xl">📦</span> Lagerbestand
-                </h2>
-                <span id="countBadge" class="bg-gray-700 text-xs px-3 py-1 rounded-full">0 Spulen</span>
+                        <!-- Material & Farbe -->
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs text-gray-400 mb-1">Material *</label>
+                                <select id="material" required
+                                        class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white focus:border-blue-500 transition">
+                                    <option value="">Wählen...</option>
+                                    <option value="PLA">PLA</option>
+                                    <option value="PETG">PETG</option>
+                                    <option value="ABS">ABS</option>
+                                    <option value="TPU">TPU</option>
+                                    <option value="ASA">ASA</option>
+                                    <option value="Nylon">Nylon</option>
+                                    <option value="PC">PC</option>
+                                </select>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-xs text-gray-400 mb-1">Farbe *</label>
+                                <input type="text" id="color" placeholder="z.B. Rot" required
+                                       class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white focus:border-blue-500 transition">
+                            </div>
+                        </div>
+
+                        <!-- Tara-Berechnung -->
+                        <div class="bg-gray-800/50 rounded-xl p-4 border border-gray-700">
+                            <h3 class="text-sm font-medium text-gray-300 mb-3 flex items-center gap-2">
+                                ⚖️ Gewichtsberechnung
+                            </h3>
+                            
+                            <div class="grid grid-cols-2 gap-3 mb-3">
+                                <div>
+                                    <label class="block text-xs text-gray-500 mb-1">Brutto (gesamt) *</label>
+                                    <input type="number" id="brutto" placeholder="1200" required
+                                           class="w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-right text-white focus:border-blue-500 transition">
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-500 mb-1">Tara (Leerspule)</label>
+                                    <input type="number" id="tara" value="220"
+                                           class="w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-right text-white focus:border-blue-500 transition">
+                                </div>
+                            </div>
+                            
+                            <div class="flex justify-between items-center bg-gray-900 rounded-lg p-3 border border-gray-700">
+                                <span class="text-sm text-gray-400">Verfügbar:</span>
+                                <span class="text-2xl font-bold text-green-400">
+                                    <span id="nettoAnzeige">0</span>g
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Speichern Button -->
+                        <button type="submit" id="saveBtn" 
+                                class="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-semibold py-3 rounded-xl shadow-lg shadow-blue-500/30 transition transform active:scale-95">
+                            💾 In Cloud speichern
+                        </button>
+                        
+                        <!-- Nachrichten -->
+                        <div id="errorMsg" class="hidden bg-red-900/50 border border-red-700 text-red-200 px-4 py-3 rounded-lg text-sm"></div>
+                        <div id="successMsg" class="hidden bg-green-900/50 border border-green-700 text-green-200 px-4 py-3 rounded-lg text-sm"></div>
+                    </form>
+                </section>
+
+                <!-- Liste -->
+                <section class="space-y-4">
+                    <!-- Filter -->
+                    <div class="flex gap-2 overflow-x-auto pb-2">
+                        <button data-filter="all" class="filter-btn px-4 py-1 rounded-full bg-blue-100 text-blue-800 text-sm whitespace-nowrap font-medium">
+                            Alle
+                        </button>
+                        <button data-filter="PLA" class="filter-btn px-4 py-1 rounded-full bg-gray-200 text-gray-700 text-sm whitespace-nowrap">
+                            PLA
+                        </button>
+                        <button data-filter="PETG" class="filter-btn px-4 py-1 rounded-full bg-gray-200 text-gray-700 text-sm whitespace-nowrap">
+                            PETG
+                        </button>
+                        <button data-filter="ABS" class="filter-btn px-4 py-1 rounded-full bg-gray-200 text-gray-700 text-sm whitespace-nowrap">
+                            ABS
+                        </button>
+                        <button data-filter="TPU" class="filter-btn px-4 py-1 rounded-full bg-gray-200 text-gray-700 text-sm whitespace-nowrap">
+                            TPU
+                        </button>
+                    </div>
+
+                    <div class="flex justify-between items-center">
+                        <h2 class="text-lg font-semibold flex items-center gap-2">
+                            <span class="text-2xl">📦</span> Lagerbestand
+                        </h2>
+                        <span id="countBadge" class="bg-gray-700 text-xs px-3 py-1 rounded-full">0 Spulen</span>
+                    </div>
+                    
+                    <div id="filamentList" class="space-y-3 max-h-[600px] overflow-y-auto pr-2">
+                        <div class="text-center text-gray-500 py-12 glass rounded-2xl">
+                            <div class="text-4xl mb-2">📭</div>
+                            <p>Lade...</p>
+                        </div>
+                    </div>
+                </section>
             </div>
-            
-            <div id="filamentList" class="space-y-3 max-h-[600px] overflow-y-auto pr-2">
-                <div class="text-center text-gray-500 py-12 glass rounded-2xl">
-                    <div class="text-4xl mb-2">📭</div>
-                    <p>Lade...</p>
+        </div>
+
+        <!-- TAB: Statistik -->
+        <div id="tab-stats" class="tab-content hidden">
+            <div id="statsContainer" class="animate-in">
+                <div class="glass rounded-2xl p-8 text-center">
+                    <div class="text-4xl mb-4">📊</div>
+                    <p class="text-gray-400">Statistiken werden geladen...</p>
                 </div>
             </div>
-        </section>
+        </div>
+
+        <!-- TAB: Einstellungen -->
+        <div id="tab-settings" class="tab-content hidden">
+            <div class="glass rounded-2xl p-6 animate-in space-y-6">
+                <h2 class="text-lg font-semibold gradient-text">⚙️ Einstellungen</h2>
+                
+                <!-- Daten Verwaltung -->
+                <div class="space-y-3">
+                    <h3 class="text-sm font-medium text-gray-300">Daten-Verwaltung</h3>
+                    <div class="flex gap-3">
+                        <button onclick="window.app.exportData()" 
+                                class="flex-1 bg-gray-800 hover:bg-gray-700 text-white py-3 rounded-lg transition text-sm">
+                            💾 Backup erstellen
+                        </button>
+                    </div>
+                    <p class="text-xs text-gray-500">
+                        Exportiere alle deine Filament-Daten als JSON-Datei.
+                    </p>
+                </div>
+
+                <!-- Info -->
+                <div class="border-t border-gray-700 pt-4">
+                    <h3 class="text-sm font-medium text-gray-300 mb-2">Über Filatest</h3>
+                    <p class="text-xs text-gray-500">
+                        Version 2.0.0 | Cloud-basierter Filament Manager
+                    </p>
+                    <p class="text-xs text-gray-500 mt-1">
+                        Daten werden in Firebase gespeichert und sind auf allen Geräten synchronisiert.
+                    </p>
+                </div>
+            </div>
+        </div>
+
     </main>
 
+    <!-- Print Area (hidden) -->
+    <div id="print-area" class="hidden-force"></div>
+
+    <!-- Haupt-App Script -->
+    <script type="module" src="js/app.js"></script>
+    
+    <!-- PWA Install -->
+    <script src="pwa-install.js"></script>
+    
+    <!-- Service Worker -->
     <script>
-        // 🔥 DEINE FIREBASE CONFIG
-        const firebaseConfig = {
-            apiKey: "AIzaSyAJGvTa_gPsUjmvlzIzTt1Nca1uC5Uzn7xs",
-            authDomain: "filatest-9a091.firebaseapp.com",
-            projectId: "filatest-9a091",
-            storageBucket: "filatest-9a091.firebasestorage.app",
-            messagingSenderId: "179130030606",
-            appId: "1:179130030606:web:013d6d598645abdf6cfa5f",
-            measurementId: "G-39HJ2T0XFD"
-        };
-
-        let db = null;
-        let filaments = [];
-
-        // Initialisierung
-        window.onload = function() {
-            try {
-                firebase.initializeApp(firebaseConfig);
-                db = firebase.firestore();
-                console.log('✅ Firebase verbunden');
-                updateStatus('online');
-                loadData();
-                
-                // Echtzeit-Updates
-                db.collection('Filatest').onSnapshot(() => {
-                    loadData();
-                });
-                
-            } catch(e) {
-                console.error('Firebase Fehler:', e);
-                updateStatus('error');
-                document.getElementById('filamentList').innerHTML = `
-                    <div class="text-center text-red-400 py-12 glass rounded-2xl">
-                        <div class="text-4xl mb-2">⚠️</div>
-                        <p>Fehler: ${e.message}</p>
-                    </div>`;
-            }
-        };
-
-        function updateStatus(mode) {
-            const indicator = document.querySelector('#connectionStatus span:first-child');
-            const text = document.getElementById('statusText');
-            
-            if (mode === 'online') {
-                indicator.className = 'w-2 h-2 rounded-full bg-green-500 animate-pulse';
-                text.textContent = 'Cloud';
-            } else {
-                indicator.className = 'w-2 h-2 rounded-full bg-red-500';
-                text.textContent = 'Fehler';
-            }
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js')
+                .then(reg => console.log('✅ Service Worker registriert'))
+                .catch(err => console.log('❌ SW Fehler:', err));
         }
-
-        function calculateNetto() {
-            const brutto = parseInt(document.getElementById('brutto').value) || 0;
-            const tara = parseInt(document.getElementById('tara').value) || 0;
-            const netto = Math.max(0, brutto - tara);
-            document.getElementById('nettoAnzeige').textContent = netto;
-        }
-
-        function showMsg(msg, isError = false) {
-            const el = isError ? document.getElementById('errorMsg') : document.getElementById('successMsg');
-            const other = isError ? document.getElementById('successMsg') : document.getElementById('errorMsg');
-            other.classList.add('hidden');
-            el.textContent = msg;
-            el.classList.remove('hidden');
-            setTimeout(() => el.classList.add('hidden'), 4000);
-        }
-
-        async function saveFilament() {
-            const btn = document.getElementById('saveBtn');
-            btn.innerHTML = '⏳ Speichere...';
-            btn.disabled = true;
-
-            const data = {
-                Material: document.getElementById('material').value,
-                Color: document.getElementById('color').value,
-                Manufakturere: document.getElementById('manufacturer').value || 'Unbekannt',
-                Weightbrutto: parseInt(document.getElementById('brutto').value) || 0,
-                Spoolwright: parseInt(document.getElementById('tara').value) || 250,
-                Weightnetto: parseInt(document.getElementById('nettoAnzeige').textContent) || 0,
-                Zimestamp: new Date().toISOString()
-            };
-
-            try {
-                await db.collection('Filatest').add(data);
-                showMsg('✅ In Cloud gespeichert!');
-                document.getElementById('filamentForm').reset();
-                calculateNetto();
-                
-            } catch (error) {
-                showMsg('❌ Fehler: ' + error.message, true);
-                console.error(error);
-            } finally {
-                btn.innerHTML = '💾 In Cloud speichern';
-                btn.disabled = false;
-            }
-        }
-
-        async function loadData() {
-            try {
-                const snapshot = await db.collection('Filatest').get();
-                filaments = [];
-                snapshot.forEach(doc => {
-                    filaments.push({ id: doc.id, ...doc.data() });
-                });
-                renderList();
-            } catch (error) {
-                console.error('Ladefehler:', error);
-            }
-        }
-
-        function renderList() {
-            const container = document.getElementById('filamentList');
-            document.getElementById('countBadge').textContent = filaments.length + ' Spulen';
-            
-            if (filaments.length === 0) {
-                container.innerHTML = `
-                    <div class="text-center text-gray-500 py-12 glass rounded-2xl border border-gray-700 border-dashed">
-                        <div class="text-4xl mb-2 opacity-50">📭</div>
-                        <p class="text-sm">Noch keine Filamente</p>
-                    </div>`;
-                return;
-            }
-
-            container.innerHTML = filaments.map(fil => `
-                <div class="filament-card glass rounded-xl p-4 border border-gray-700 relative overflow-hidden">
-                    <div class="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-blue-500/20 to-purple-500/20 rounded-bl-full -mr-4 -mt-4"></div>
-                    
-                    <div class="relative flex justify-between items-start">
-                        <div>
-                            <div class="flex items-center gap-2 mb-1">
-                                <span class="text-lg font-bold text-white">${fil.Material}</span>
-                                <span class="text-sm text-gray-400">${fil.Color}</span>
-                            </div>
-                            <div class="text-xs text-gray-500 mb-2">${fil.Manufakturere}</div>
-                            
-                            <div class="flex items-center gap-3 mt-3">
-                                <div class="bg-gray-900 rounded-lg px-3 py-1.5 border border-gray-700">
-                                    <span class="text-xs text-gray-500 block">Verfügbar</span>
-                                    <span class="text-lg font-bold text-green-400">${fil.Weightnetto}g</span>
-                                </div>
-                                <div class="text-xs text-gray-600 leading-tight">
-                                    Brutto: ${fil.Weightbrutto}g<br>
-                                    Tara: ${fil.Spoolwright}g
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <button onclick="deleteFilament('${fil.id}')" class="text-gray-600 hover:text-red-400 transition p-2">🗑️</button>
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        async function deleteFilament(id) {
-            if (!confirm('Wirklich löschen?')) return;
-            try {
-                await db.collection('Filatest').doc(id).delete();
-            } catch (error) {
-                showMsg('Fehler beim Löschen: ' + error.message, true);
-            }
-        }
-
-        function exportData() {
-            const blob = new Blob([JSON.stringify(filaments, null, 2)], {type: 'application/json'});
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `filament-backup-${new Date().toISOString().split('T')[0]}.json`;
-            a.click();
-        }
-
-        calculateNetto();
     </script>
 </body>
 </html>
