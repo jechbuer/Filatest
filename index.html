@@ -185,8 +185,17 @@
                             
                             <div>
                                 <label class="block text-xs text-gray-400 mb-1">Farbe *</label>
-                                <input type="text" id="color" placeholder="z.B. Rot" required
-                                       class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white focus:border-blue-500 transition">
+                                <div class="relative">
+                                    <input type="text" id="color" placeholder="z.B. Rot" required
+                                           class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white focus:border-blue-500 transition"
+                                           list="colorSuggestions">
+                                    <datalist id="colorSuggestions"></datalist>
+                                </div>
+                                <!-- Bambu Color Picker -->
+                                <div id="bambuColorPicker" class="mt-2 hidden">
+                                    <p class="text-xs text-gray-500 mb-2">🎨 Bambu Farben:</p>
+                                    <div id="bambuColors" class="flex flex-wrap gap-2 max-h-24 overflow-y-auto"></div>
+                                </div>
                             </div>
                         </div>
 

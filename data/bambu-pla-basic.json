@@ -1,0 +1,463 @@
+{
+  "product": {
+    "name": "Bambu PLA Basic",
+    "url": "https://eu.store.bambulab.com/de/products/pla-basic-filament",
+    "description": "Experience easy, reliable, and consistent 3D printing with Bambu PLA Basic. Ideal for everyday projects, this filament is optimized for both performance and affordability, making it the perfect choice for dependable, high-quality prints at a great value.",
+    "brand": "Bambu Lab",
+    "material": "PLA",
+    "diameter": "1.75mm",
+    "diameter_tolerance": "±0.03mm",
+    "weight": "1kg",
+    "filament_length": "335m",
+    "color_count": 30,
+    "pricing": {
+      "currency": "EUR",
+      "region": "EU",
+      "single_roll": {
+        "price_regular": 22.99,
+        "price_sale": null
+      },
+      "bulk_sale": {
+        "minimum_price": 11.50,
+        "conditions": "As low as €11.50 per roll with bulk savings"
+      },
+      "refill_pack_10_rolls": {
+        "price": 109.90,
+        "rrp": 229.90
+      }
+    },
+    "shipping": {
+      "free_shipping_threshold": {
+        "eu_countries": 55,
+        "norway": 119
+      },
+      "currency": "EUR"
+    }
+  },
+  "features": [
+    "Easy and reliable 3D printing experience",
+    "Optimized for performance and affordability",
+    "High-quality prints at great value",
+    "Up to 30 colors available",
+    "Color consistency across prints",
+    "Smooth printing from the start",
+    "No complicated setups or calibrations needed",
+    "Stronger layer adhesion than standard PLA",
+    "Enhanced impact resistance",
+    "Long-lasting durability",
+    "Print speed up to 258mm/s (0.4mm nozzle, 0.4mm line width, 0.2mm layer height)",
+    "RFID embedded for intelligent printing",
+    "AMS compatible",
+    "Biodegradable composition"
+  ],
+  "colors": [
+    {
+      "name": "Jade White",
+      "hex": "#FFFFFF",
+      "sku": "10100",
+      "sku_full": "A00-10100-1.75-1000-SPL",
+      "category": "White"
+    },
+    {
+      "name": "Beige",
+      "hex": "#F7E6DE",
+      "sku": "10201",
+      "sku_full": "A00-10201-1.75-1000-SPL",
+      "category": "White/Cream"
+    },
+    {
+      "name": "Black",
+      "hex": "#000000",
+      "sku": "10101",
+      "sku_full": "A00-10101-1.75-1000-SPL",
+      "category": "Black"
+    },
+    {
+      "name": "Blue",
+      "hex": "#0A2989",
+      "sku": "10601",
+      "sku_full": "A00-10601-1.75-1000-SPL",
+      "category": "Blue"
+    },
+    {
+      "name": "Blue Grey",
+      "hex": "#5B6579",
+      "sku": "10602",
+      "sku_full": "A00-10602-1.75-1000-SPL",
+      "category": "Grey"
+    },
+    {
+      "name": "Bambu Green",
+      "hex": "#00AE42",
+      "sku": "10501",
+      "sku_full": "A00-10501-1.75-1000-SPL",
+      "category": "Green"
+    },
+    {
+      "name": "Bright Green",
+      "hex": "#00FF00",
+      "sku": "10503",
+      "sku_full": "A00-10503-1.75-1000-SPL",
+      "category": "Green"
+    },
+    {
+      "name": "Bronze",
+      "hex": "#847D48",
+      "sku": "10801",
+      "sku_full": "A00-10801-1.75-1000-SPL",
+      "category": "Metallic"
+    },
+    {
+      "name": "Brown",
+      "hex": "#9D432C",
+      "sku": "10800",
+      "sku_full": "A00-10800-1.75-1000-SPL",
+      "category": "Brown"
+    },
+    {
+      "name": "Cobalt Blue",
+      "hex": "#0047AB",
+      "sku": "10604",
+      "sku_full": "A00-10604-1.75-1000-SPL",
+      "category": "Blue"
+    },
+    {
+      "name": "Cocoa Brown",
+      "hex": "#5D4037",
+      "sku": "10802",
+      "sku_full": "A00-10802-1.75-1000-SPL",
+      "category": "Brown"
+    },
+    {
+      "name": "Cyan",
+      "hex": "#0086D6",
+      "sku": "10603",
+      "sku_full": "A00-10603-1.75-1000-SPL",
+      "category": "Blue"
+    },
+    {
+      "name": "Dark Gray",
+      "hex": "#4A4A4A",
+      "sku": "10105",
+      "sku_full": "A00-10105-1.75-1000-SPL",
+      "category": "Grey"
+    },
+    {
+      "name": "Fire Engine Red",
+      "hex": "#CE2029",
+      "sku": "10206",
+      "sku_full": "A00-10206-1.75-1000-SPL",
+      "category": "Red"
+    },
+    {
+      "name": "Gold",
+      "hex": "#E4BD68",
+      "sku": "10401",
+      "sku_full": "A00-10401-1.75-1000-SPL",
+      "category": "Metallic"
+    },
+    {
+      "name": "Grey",
+      "hex": "#8E9089",
+      "sku": "10103",
+      "sku_full": "A00-10103-1.75-1000-SPL",
+      "category": "Grey"
+    },
+    {
+      "name": "Hot Pink",
+      "hex": "#FF69B4",
+      "sku": "10204",
+      "sku_full": "A00-10204-1.75-1000-SPL",
+      "category": "Pink"
+    },
+    {
+      "name": "Indigo Purple",
+      "hex": "#4B0082",
+      "sku": "10701",
+      "sku_full": "A00-10701-1.75-1000-SPL",
+      "category": "Purple"
+    },
+    {
+      "name": "Light Gray",
+      "hex": "#D3D3D3",
+      "sku": "10104",
+      "sku_full": "A00-10104-1.75-1000-SPL",
+      "category": "Grey"
+    },
+    {
+      "name": "Magenta",
+      "hex": "#EC008C",
+      "sku": "10202",
+      "sku_full": "A00-10202-1.75-1000-SPL",
+      "category": "Pink"
+    },
+    {
+      "name": "Maroon Red",
+      "hex": "#9D2235",
+      "sku": "10205",
+      "sku_full": "A00-10205-1.75-1000-SPL",
+      "category": "Red"
+    },
+    {
+      "name": "Mistletoe Green",
+      "hex": "#3F8E43",
+      "sku": "10502",
+      "sku_full": "A00-10502-1.75-1000-SPL",
+      "category": "Green"
+    },
+    {
+      "name": "Orange",
+      "hex": "#FF6A13",
+      "sku": "10300",
+      "sku_full": "A00-10300-1.75-1000-SPL",
+      "category": "Orange"
+    },
+    {
+      "name": "Pink",
+      "hex": "#F55A74",
+      "sku": "10203",
+      "sku_full": "A00-10203-1.75-1000-SPL",
+      "category": "Pink"
+    },
+    {
+      "name": "Pumpkin Orange",
+      "hex": "#FF7518",
+      "sku": "10301",
+      "sku_full": "A00-10301-1.75-1000-SPL",
+      "category": "Orange"
+    },
+    {
+      "name": "Purple",
+      "hex": "#5E43B7",
+      "sku": "10700",
+      "sku_full": "A00-10700-1.75-1000-SPL",
+      "category": "Purple"
+    },
+    {
+      "name": "Red",
+      "hex": "#C12E1F",
+      "sku": "10200",
+      "sku_full": "A00-10200-1.75-1000-SPL",
+      "category": "Red"
+    },
+    {
+      "name": "Silver",
+      "hex": "#A6A9AA",
+      "sku": "10102",
+      "sku_full": "A00-10102-1.75-1000-SPL",
+      "category": "Metallic"
+    },
+    {
+      "name": "Sunflower Yellow",
+      "hex": "#FFC512",
+      "sku": "10402",
+      "sku_full": "A00-10402-1.75-1000-SPL",
+      "category": "Yellow"
+    },
+    {
+      "name": "Turquoise",
+      "hex": "#40E0D0",
+      "sku": "10605",
+      "sku_full": "A00-10605-1.75-1000-SPL",
+      "category": "Blue"
+    },
+    {
+      "name": "Yellow",
+      "hex": "#F4EE2A",
+      "sku": "10400",
+      "sku_full": "A00-10400-1.75-1000-SPL",
+      "category": "Yellow"
+    }
+  ],
+  "product_variants": {
+    "with_spool": {
+      "description": "Filament with reusable spool",
+      "weight": "1kg filament + spool",
+      "sku_suffix": "-SPL"
+    },
+    "refill": {
+      "description": "Refill filament without spool",
+      "weight": "1kg filament only",
+      "sku_suffix": "-R",
+      "notes": "Requires Bambu Reusable Spool or printed spool"
+    }
+  },
+  "printing_settings": {
+    "nozzle_temperature": {
+      "min": 190,
+      "max": 230,
+      "unit": "°C"
+    },
+    "bed_temperature": {
+      "min": 35,
+      "max": 45,
+      "unit": "°C",
+      "note": "With glue"
+    },
+    "printing_speed": {
+      "max": 300,
+      "recommended_max": 258,
+      "unit": "mm/s",
+      "conditions": "0.4mm nozzle, 0.4mm line width, 0.2mm layer height"
+    },
+    "retraction": {
+      "min": 20,
+      "max": 40,
+      "unit": "mm"
+    },
+    "drying_settings": {
+      "blast_drying_oven": {
+        "temperature": 50,
+        "time": 8,
+        "unit": "hours"
+      },
+      "ams_2_pro_and_ht": {
+        "temperature": 55,
+        "time": 8,
+        "unit": "hours"
+      },
+      "x1_heatbed": {
+        "temperature_min": 60,
+        "temperature_max": 70,
+        "time": 12,
+        "unit": "hours"
+      }
+    },
+    "humidity": {
+      "printing_and_storage": "< 20% RH (Sealed, with Desiccant)"
+    }
+  },
+  "physical_properties": {
+    "density": {
+      "value": 1.24,
+      "unit": "g/cm³"
+    },
+    "vicat_softening_temperature": {
+      "value": 57,
+      "unit": "°C",
+      "standard": "ISO 306"
+    },
+    "heat_deflection_temperature": {
+      "value": 54,
+      "unit": "°C",
+      "standard": "ISO 75"
+    },
+    "melting_temperature": {
+      "value": 160,
+      "unit": "°C"
+    },
+    "melt_index": {
+      "value": "42.4 ± 3.5",
+      "unit": "g/10 min"
+    },
+    "specific_gravity": {
+      "value": 1.24,
+      "unit": "g/cm³",
+      "standard": "ISO 1183"
+    }
+  },
+  "mechanical_properties": {
+    "tensile_strength": {
+      "value": "35 ± 4",
+      "unit": "MPa"
+    },
+    "breaking_elongation_rate": {
+      "value": "12.2 ± 1.8",
+      "unit": "%"
+    },
+    "bending_modulus": {
+      "value": "2750 ± 160",
+      "unit": "MPa",
+      "standard": "ISO 178"
+    },
+    "bending_strength": {
+      "value": "76 ± 5",
+      "unit": "MPa",
+      "standard": "ISO 178"
+    },
+    "impact_strength": {
+      "value": "26.6 ± 2.8",
+      "unit": "kJ/m²",
+      "standard": "ISO 179"
+    },
+    "flexural_strength": {
+      "value": 76,
+      "unit": "MPa",
+      "standard": "ISO 178"
+    },
+    "flexural_modulus": {
+      "value": 2750,
+      "unit": "MPa",
+      "standard": "ISO 178"
+    }
+  },
+  "compatibility": {
+    "ams": {
+      "recommended": ["AMS", "AMS 2 Pro", "AMS HT", "AMS lite"],
+      "not_recommended": []
+    },
+    "build_plate": {
+      "recommended": ["Cool Plate SuperTack", "Smooth PEI Plate", "Textured PEI Plate", "3D Effect Plate"],
+      "not_recommended": []
+    },
+    "hotend": {
+      "recommended": ["All Size / Material"],
+      "not_recommended": []
+    },
+    "glue": {
+      "recommended": ["Bambu Liquid Glue", "Glue Stick"],
+      "not_recommended": []
+    }
+  },
+  "rfid": {
+    "enabled": true,
+    "description": "All printing parameters are embedded in RFID, which can be read through our AMS (Automatic Material System). Load and print! No more tedious setting steps."
+  },
+  "packaging": {
+    "with_spool": {
+      "contents": ["Filament with Spool ×1", "Desiccant ×1", "Package ×1"]
+    },
+    "refill": {
+      "contents": ["Filament Refill ×1", "Desiccant ×1"],
+      "note": "Refill filament needs to be used with a spool. Bambu Reusable Spool sold separately or print your own."
+    }
+  },
+  "printing_tips": [
+    "Dry before use to ensure the best print quality and consistent finish.",
+    "Store in a dry environment after use.",
+    "For drying instructions, refer to Filament drying instructions on WIKI.",
+    "The refill filament needs to be used with a spool. For detailed instructions on how to swap in the new filament using the Bambu Reusable Spool, refer to the guide on WIKI.",
+    "Colors and textures are subject to the physical product. Images are for reference only."
+  ],
+  "downloads_available": [
+    "Technical Data Sheet",
+    "Safety Data Sheet",
+    "Filament Drying Instructions",
+    "Spool Assembly Guide"
+  ],
+  "related_products": [
+    {
+      "name": "Bambu Reusable Spool",
+      "price_eur": 13.99,
+      "description": "Required for using refill filament"
+    },
+    {
+      "name": "PLA Basic Starter Classic Pack",
+      "price_eur": 63.99,
+      "description": "Starter pack with multiple colors"
+    },
+    {
+      "name": "PLA Basic Refill Pack 10 Rolls",
+      "price_eur": 109.90,
+      "rrp_eur": 229.90,
+      "description": "Bulk refill pack"
+    }
+  ],
+  "metadata": {
+    "source_url": "https://eu.store.bambulab.com/de/products/pla-basic-filament",
+    "region": "EU/Germany",
+    "currency": "EUR",
+    "last_updated": "2026-02-23",
+    "data_collected_from": ["Bambu Lab EU Store", "Authorized Resellers", "Official Documentation"]
+  }
+}

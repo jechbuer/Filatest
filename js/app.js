@@ -2,6 +2,7 @@
 import { initFirebase } from './config/firebase.js';
 import { filamentService } from './services/db.js';
 import { masterDataService } from './services/masterData.js';
+import { bambuDictionary } from './services/bambuDictionary.js';
 import { 
     updateConnectionStatus, 
     showMessage, 
@@ -38,6 +39,12 @@ class FilamentApp {
             // Stammdaten laden
             await this.loadMasterData();
             
+            // Bambu Dictionary laden (optional)
+            await bambuDictionary.load();
+            if (bambuDictionary.loaded) {
+                this.setupBambuColorPicker();
+            }
+            
             // Scanner initialisieren
             this.scanner = new BarcodeScanner((barcode) => this.handleBarcodeScan(barcode));
             
@@ -60,6 +67,61 @@ class FilamentApp {
             updateConnectionStatus('error');
             showMessage('Fehler beim Verbinden: ' + error.message, true);
         }
+    }
+
+    // Bambu Farbwähler einrichten
+    setupBambuColorPicker() {
+        const container = document.getElementById('bambuColors');
+        const wrapper = document.getElementById('bambuColorPicker');
+        const datalist = document.getElementById('colorSuggestions');
+        
+        if (!container || !wrapper) return;
+        
+        const colors = bambuDictionary.getAllColors();
+        if (colors.length === 0) return;
+        
+        // Datalist für Autocomplete füllen
+        if (datalist) {
+            datalist.innerHTML = colors.map(c => 
+                `<option value="${c.name}">${c.name} (${c.category})</option>`
+            ).join('');
+        }
+        
+        // Farb-Chips erstellen (nur eine Auswahl anzeigen)
+        const displayColors = colors.slice(0, 12); // Erste 12 Farben
+        container.innerHTML = displayColors.map(color => `
+            <button type="button" 
+                    class="w-8 h-8 rounded-full border-2 border-gray-600 hover:border-white hover:scale-110 transition shadow-lg"
+                    style="background-color: ${color.hex};"
+                    title="${color.name}"
+                    onclick="window.app.selectBambuColor('${color.name}', '${color.hex}')">
+            </button>
+        `).join('');
+        
+        wrapper.classList.remove('hidden');
+    }
+
+    // Bambu Farbe auswählen
+    selectBambuColor(name, hex) {
+        const colorInput = document.getElementById('color');
+        if (colorInput) {
+            colorInput.value = name;
+        }
+        
+        // Material automatisch auf PLA setzen wenn Bambu
+        const materialSelect = document.getElementById('material');
+        if (materialSelect && !materialSelect.value) {
+            materialSelect.value = 'PLA';
+        }
+        
+        // Hersteller auf Bambu Lab setzen
+        const manufacturerInput = document.getElementById('manufacturer');
+        if (manufacturerInput && !manufacturerInput.value) {
+            manufacturerInput.value = 'Bambu Lab';
+        }
+        
+        soundPlayer.playSuccess();
+        showMessage(`🎨 ${name} ausgewählt`);
     }
 
     // Stammdaten laden
@@ -94,6 +156,14 @@ class FilamentApp {
         const brandSelect = document.getElementById('f-brand-select');
         if (brandSelect) {
             brandSelect.addEventListener('change', () => this.updateTara());
+        }
+
+        // Farb-Eingabe - Bambu Lookup
+        const colorInput = document.getElementById('color');
+        if (colorInput && bambuDictionary.loaded) {
+            colorInput.addEventListener('input', (e) => {
+                this.lookupBambuColor(e.target.value);
+            });
         }
 
         // Gewichts-Eingaben
@@ -250,6 +320,19 @@ class FilamentApp {
                     field.toString().toLowerCase().includes(query)
                 );
             });
+            
+            // Auch im Bambu Dictionary suchen und passende Farben hervorheben
+            if (bambuDictionary.loaded) {
+                const bambuColor = bambuDictionary.findByName(query);
+                if (bambuColor) {
+                    // Zusätzlich nach dieser Farbe suchen
+                    const additionalMatches = this.filaments.filter(f => 
+                        !filtered.includes(f) && 
+                        f.Color?.toLowerCase() === bambuColor.name.toLowerCase()
+                    );
+                    filtered = [...filtered, ...additionalMatches];
+                }
+            }
         }
         
         renderFilamentList(filtered);
@@ -339,20 +422,66 @@ class FilamentApp {
     async handleBarcodeScan(barcode) {
         console.log('Barcode gescannt:', barcode);
         
-        // Suchen ob Filament mit diesem Barcode existiert
+        // 1. Prüfen ob Filament mit diesem Barcode existiert
         const existing = this.filaments.find(f => f.barcode === barcode);
         
         if (existing) {
             // Verbrauch buchen
             this.consumeFilament(existing.id);
-        } else {
-            // Neues Filament mit diesem Barcode
-            document.getElementById('barcode').value = barcode;
-            showMessage('📷 Barcode erkannt! Bitte fülle die restlichen Daten aus.');
-            
-            // Zum Formular scrollen
-            document.getElementById('filamentForm').scrollIntoView({ behavior: 'smooth' });
+            return;
         }
+        
+        // 2. Im Bambu Dictionary suchen
+        if (bambuDictionary.loaded) {
+            const color = bambuDictionary.parseBarcode(barcode);
+            
+            if (color) {
+                // Bambu Filament erkannt - Auto-fill
+                this.autoFillBambuData(color, barcode);
+                soundPlayer.playSuccess();
+                showMessage(`🎉 ${color.name} erkannt! Daten wurden ausgefüllt.`);
+                return;
+            }
+        }
+        
+        // 3. Unbekannter Barcode - manuelle Eingabe
+        document.getElementById('barcode').value = barcode;
+        showMessage('📷 Barcode erkannt! Bitte fülle die restlichen Daten aus.');
+        
+        // Zum Neu-Tab wechseln
+        this.switchTab('add');
+    }
+
+    // Bambu Daten automatisch ausfüllen
+    autoFillBambuData(color, barcode) {
+        // Barcode speichern
+        document.getElementById('barcode').value = barcode;
+        
+        // Farbe setzen
+        const colorInput = document.getElementById('color');
+        if (colorInput) colorInput.value = color.name;
+        
+        // Material auf PLA setzen
+        const materialSelect = document.getElementById('material');
+        if (materialSelect) materialSelect.value = 'PLA';
+        
+        // Hersteller auf Bambu Lab setzen
+        const manufacturerInput = document.getElementById('manufacturer');
+        if (manufacturerInput) manufacturerInput.value = 'Bambu Lab';
+        
+        // Zum Neu-Tab wechseln
+        this.switchTab('add');
+        
+        // Farb-Chips hervorheben
+        const chips = document.querySelectorAll('#bambuColors button');
+        chips.forEach(chip => {
+            if (chip.title === color.name) {
+                chip.classList.add('ring-2', 'ring-white', 'scale-125');
+                setTimeout(() => {
+                    chip.classList.remove('ring-2', 'ring-white', 'scale-125');
+                }, 2000);
+            }
+        });
     }
 
     // Daten exportieren
@@ -400,6 +529,17 @@ class FilamentApp {
             renderStats(stats, 'statsContainer', true);
         } catch (error) {
             console.error('Fehler beim Laden der Statistiken:', error);
+        }
+    }
+
+    // Bambu Farbe beim Tippen nachschlagen
+    lookupBambuColor(input) {
+        if (!bambuDictionary.loaded || !input || input.length < 2) return;
+        
+        const color = bambuDictionary.findByName(input);
+        if (color) {
+            // Gefunden! Aber nur vorschlagen, nicht automatisch ausfüllen
+            console.log('🎨 Bambu Farbe gefunden:', color.name, color.hex);
         }
     }
 
