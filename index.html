@@ -2,634 +2,301 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="theme-color" content="#3b82f6">
-    <meta name="description" content="3D-Drucker Filament Manager mit Barcode-Scanning">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Filament Store">
-    <link rel="manifest" href="manifest.json">
-    <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192x192.png">
-    <link rel="apple-touch-icon" sizes="192x192" href="icons/icon-192x192.png">
-    <title>Filament Store</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Filatest Pro</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/html5-qrcode"></script>
-    <script src="https://unpkg.com/dexie@3.2.4/dist/dexie.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
     <style>
-        .glass { background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); }
-        .slide-up { animation: slideUp 0.3s ease-out; }
-        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
-        .hidden-force { display: none !important; }
-        .print-label { 
-            width: 62mm; 
-            height: 29mm; 
-            border: 1px dashed #ccc; 
-            padding: 2mm;
-            page-break-after: always;
-        }
-        @media print {
-            body * { visibility: hidden; }
-            #print-area, #print-area * { visibility: visible; }
-            #print-area { position: absolute; left: 0; top: 0; }
-        }
+        body { font-family: 'Inter', sans-serif; background: #0f172a; }
+        .glass { background: rgba(30, 41, 59, 0.8); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
+        .gradient-text { background: linear-gradient(135deg, #60a5fa, #a78bfa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .filament-card { transition: all 0.3s ease; }
+        .filament-card:hover { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+        @keyframes slideIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-in { animation: slideIn 0.4s ease-out; }
     </style>
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 </head>
-<body class="bg-gray-100 min-h-screen font-sans">
+<body class="text-gray-100 min-h-screen pb-20">
 
-    <!-- Navigation -->
-    <nav class="bg-blue-600 text-white p-4 sticky top-0 z-50 shadow-lg">
-        <div class="flex justify-between items-center max-w-2xl mx-auto">
-            <h1 class="text-xl font-bold flex items-center gap-2">
-                🧵 <span class="hidden sm:inline">Filament Manager</span>
-            </h1>
-            <div class="flex gap-2">
-                <button onclick="showTab('inventory')" class="px-3 py-1 rounded bg-blue-500 hover:bg-blue-400 text-sm">Lager</button>
-                <button onclick="showTab('projects')" class="px-3 py-1 rounded bg-blue-500 hover:bg-blue-400 text-sm">Projekte</button>
-                <button onclick="showTab('stats')" class="px-3 py-1 rounded bg-blue-500 hover:bg-blue-400 text-sm">Statistik</button>
-            </div>
-        </div>
-    </nav>
-
-    <!-- Scanner Overlay -->
-    <div id="scanner-modal" class="fixed inset-0 bg-black z-50 hidden flex flex-col">
-        <div class="flex justify-between items-center p-4 bg-black text-white">
-            <h2 class="font-bold">Barcode scannen</h2>
-            <button onclick="stopScan()" class="text-2xl">✕</button>
-        </div>
-        <div id="reader" class="flex-1"></div>
-        <div class="p-4 bg-gray-900 text-white text-center text-sm">
-            Halte den Barcode in den Rahmen
-        </div>
-    </div>
-
-    <!-- Hauptbereich: Lager -->
-    <div id="tab-inventory" class="max-w-2xl mx-auto pb-24">
-        <!-- Action Buttons -->
-        <div class="p-4 grid grid-cols-2 gap-3">
-            <button onclick="startScan()" class="bg-blue-600 text-white p-4 rounded-xl shadow-lg flex flex-col items-center gap-1 active:scale-95 transition-transform">
-                <span class="text-2xl">📷</span>
-                <span class="font-medium">Scannen</span>
-            </button>
-            <button onclick="showAddForm()" class="bg-green-600 text-white p-4 rounded-xl shadow-lg flex flex-col items-center gap-1 active:scale-95 transition-transform">
-                <span class="text-2xl">➕</span>
-                <span class="font-medium">Manuell</span>
-            </button>
-        </div>
-
-        <!-- Filter -->
-        <div class="px-4 mb-4 flex gap-2 overflow-x-auto">
-            <button onclick="filterMaterial('all')" class="px-4 py-1 rounded-full bg-blue-100 text-blue-800 text-sm whitespace-nowrap font-medium">Alle</button>
-            <button onclick="filterMaterial('PLA')" class="px-4 py-1 rounded-full bg-gray-200 text-gray-700 text-sm whitespace-nowrap">PLA</button>
-            <button onclick="filterMaterial('PETG')" class="px-4 py-1 rounded-full bg-gray-200 text-gray-700 text-sm whitespace-nowrap">PETG</button>
-            <button onclick="filterMaterial('ABS')" class="px-4 py-1 rounded-full bg-gray-200 text-gray-700 text-sm whitespace-nowrap">ABS</button>
-        </div>
-
-        <!-- Filament List -->
-        <div id="filament-list" class="px-4 space-y-3"></div>
-    </div>
-
-    <!-- Hauptbereich: Projekte -->
-    <div id="tab-projects" class="max-w-2xl mx-auto pb-24 hidden">
-        <div class="p-4">
-            <button onclick="showProjectForm()" class="w-full bg-purple-600 text-white p-3 rounded-lg font-medium mb-4">
-                + Neues Projekt
-            </button>
-            <div id="project-list" class="space-y-3"></div>
-        </div>
-    </div>
-
-    <!-- Hauptbereich: Statistik -->
-    <div id="tab-stats" class="max-w-2xl mx-auto pb-24 hidden px-4 py-6">
-        <div class="grid grid-cols-2 gap-4 mb-6">
-            <div class="bg-white p-4 rounded-xl shadow">
-                <div class="text-gray-500 text-sm">Gesamt Spulen</div>
-                <div class="text-3xl font-bold text-blue-600" id="stat-total">0</div>
-            </div>
-            <div class="bg-white p-4 rounded-xl shadow">
-                <div class="text-gray-500 text-sm">Gesamtgewicht</div>
-                <div class="text-3xl font-bold text-green-600" id="stat-weight">0g</div>
-            </div>
-        </div>
-        <div class="bg-white p-4 rounded-xl shadow">
-            <h3 class="font-bold mb-3">Material-Verteilung</h3>
-            <div id="stat-materials" class="space-y-2"></div>
-        </div>
-    </div>
-
-    <!-- Form: Neues Filament (mit Tara-Funktion) -->
-    <div id="add-form" class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
-        <div class="bg-white w-full max-w-lg rounded-t-2xl sm:rounded-2xl p-6 slide-up max-h-[90vh] overflow-y-auto">
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-xl font-bold">Neues Filament</h2>
-                <button onclick="closeAddForm()" class="text-gray-500 text-2xl">✕</button>
-            </div>
-
-            <div class="space-y-4">
-                <input type="hidden" id="f-barcode">
-                
-                <!-- Tara-Assistent -->
-                <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                    <h3 class="font-bold text-blue-900 mb-2 flex items-center gap-2">
-                        ⚖️ Gewichtserfassung mit Tara
-                    </h3>
-                    
-                    <div class="grid grid-cols-2 gap-2 mb-2">
-                        <button onclick="setSpoolType('plastic')" class="spool-type-btn bg-white border-2 border-blue-500 p-2 rounded text-sm font-medium" data-type="plastic">
-                            Kunststoff<br><span class="text-xs text-gray-500">~220g</span>
-                        </button>
-                        <button onclick="setSpoolType('cardboard')" class="spool-type-btn bg-white border-2 border-gray-300 p-2 rounded text-sm font-medium" data-type="cardboard">
-                            Pappe<br><span class="text-xs text-gray-500">~145g</span>
-                        </button>
-                    </div>
-
-                    <div class="mb-2">
-                        <label class="block text-xs font-medium text-gray-700 mb-1">Hersteller (für genaues Tara)</label>
-                        <select id="f-brand-select" onchange="updateTara()" class="w-full border rounded p-2 text-sm">
-                            <option value="">-- Hersteller wählen --</option>
-                            <optgroup label="Standard (Kunststoff ~220g)">
-                                <option value="prusament" data-tara="201">Prusament (201g)</option>
-                                <option value="esun" data-tara="230">eSun (230g)</option>
-                                <option value="sunlu" data-tara="140">Sunlu (140g)</option>
-                                <option value="overture" data-tara="237">Overture (237g)</option>
-                            </optgroup>
-                            <optgroup label="Eco/Pappe (leicht)">
-                                <option value="polyterra" data-tara="139">PolyTerra (139g)</option>
-                                <option value="3djake_eco" data-tara="209">3DJake Eco (209g)</option>
-                                <option value="elegoo_card" data-tara="145">Elegoo Pappe (145g)</option>
-                            </optgroup>
-                            <option value="custom">Eigenes Gewicht...</option>
-                        </select>
-                    </div>
-
-                    <div class="grid grid-cols-2 gap-3">
-                        <div>
-                            <label class="block text-xs font-medium text-gray-700">Brutto (Spule + Filament)</label>
-                            <input type="number" id="f-gross-weight" oninput="calculateNet()" class="w-full border rounded p-2" placeholder="z.B. 1200">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-medium text-gray-700">Tara (Leerspule)</label>
-                            <input type="number" id="f-tara" oninput="calculateNet()" class="w-full border rounded p-2 bg-gray-50" value="220">
-                        </div>
-                    </div>
-                    <div class="mt-2 text-right font-bold text-lg text-blue-700">
-                        Netto: <span id="f-net-weight">0</span>g Filament
-                    </div>
+    <!-- Header -->
+    <header class="sticky top-0 z-50 glass border-b border-gray-700">
+        <div class="max-w-4xl mx-auto px-4 py-4 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center text-xl">🧵</div>
+                <div>
+                    <h1 class="text-xl font-bold gradient-text">Filatest</h1>
+                    <p class="text-xs text-gray-400">Cloud Sync Aktiv</p>
                 </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <span id="connectionStatus" class="text-xs px-3 py-1 rounded-full bg-gray-700 text-gray-300 flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-yellow-500 animate-pulse"></span>
+                    <span id="statusText">Verbinde...</span>
+                </span>
+                <button onclick="exportData()" class="p-2 hover:bg-gray-700 rounded-lg transition" title="Backup">💾</button>
+            </div>
+        </div>
+    </header>
 
+    <!-- Hauptbereich -->
+    <main class="max-w-4xl mx-auto px-4 mt-6 grid md:grid-cols-2 gap-6">
+        
+        <!-- Formular -->
+        <section class="glass rounded-2xl p-6 animate-in">
+            <h2 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                <span class="text-2xl">➕</span> Neues Filament
+            </h2>
+            
+            <form id="filamentForm" class="space-y-4" onsubmit="event.preventDefault(); saveFilament();">
                 <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Hersteller</label>
-                        <input type="text" id="f-brand" class="w-full border rounded p-2" placeholder="z.B. Prusament">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Material</label>
-                        <select id="f-material" class="w-full border rounded p-2">
+                    <div class="col-span-2">
+                        <label class="block text-xs text-gray-400 mb-1">Material</label>
+                        <select id="material" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white focus:border-blue-500 transition" required>
+                            <option value="">Wählen...</option>
                             <option value="PLA">PLA</option>
                             <option value="PETG">PETG</option>
                             <option value="ABS">ABS</option>
                             <option value="TPU">TPU</option>
                             <option value="ASA">ASA</option>
-                            <option value="Nylon">Nylon</option>
-                            <option value="PC">PC</option>
                         </select>
                     </div>
-                </div>
-
-                <div class="grid grid-cols-2 gap-3">
+                    
                     <div>
-                        <label class="block text-sm font-medium text-gray-700">Farbe</label>
-                        <input type="text" id="f-color" class="w-full border rounded p-2" placeholder="Galaxy Black">
+                        <label class="block text-xs text-gray-400 mb-1">Farbe</label>
+                        <input type="text" id="color" placeholder="z.B. Rot" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 focus:border-blue-500 transition" required>
                     </div>
+                    
                     <div>
-                        <label class="block text-sm font-medium text-gray-700">Durchmesser</label>
-                        <select id="f-diameter" class="w-full border rounded p-2">
-                            <option value="1.75">1.75mm</option>
-                            <option value="2.85">2.85mm</option>
-                        </select>
+                        <label class="block text-xs text-gray-400 mb-1">Hersteller</label>
+                        <input type="text" id="manufacturer" placeholder="z.B. Prusament" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 focus:border-blue-500 transition">
                     </div>
                 </div>
 
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Nozzle (°C)</label>
-                        <input type="number" id="f-nozzle" class="w-full border rounded p-2" placeholder="210">
+                <!-- Tara-Berechnung -->
+                <div class="bg-gray-800/50 rounded-xl p-4 border border-gray-700">
+                    <h3 class="text-sm font-medium text-gray-300 mb-3">⚖️ Gewichtsberechnung</h3>
+                    
+                    <div class="grid grid-cols-2 gap-3 mb-3">
+                        <div>
+                            <label class="block text-xs text-gray-500 mb-1">Brutto (gesamt)</label>
+                            <input type="number" id="brutto" placeholder="1200" class="w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-right focus:border-blue-500 transition" oninput="calculateNetto()" required>
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-500 mb-1">Tara (Leerspule)</label>
+                            <input type="number" id="tara" value="250" class="w-full bg-gray-800 border border-gray-600 rounded-lg px-3 py-2 text-right focus:border-blue-500 transition" oninput="calculateNetto()">
+                        </div>
                     </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Bed (°C)</label>
-                        <input type="number" id="f-bed" class="w-full border rounded p-2" placeholder="60">
+                    
+                    <div class="flex justify-between items-center bg-gray-900 rounded-lg p-3 border border-gray-700">
+                        <span class="text-sm text-gray-400">Verfügbar:</span>
+                        <span class="text-2xl font-bold text-green-400"><span id="nettoAnzeige">0</span>g</span>
                     </div>
                 </div>
 
-                <div class="flex gap-2 pt-2">
-                    <button onclick="closeAddForm()" class="flex-1 bg-gray-300 text-gray-700 py-2 rounded font-medium">Abbrechen</button>
-                    <button onclick="saveFilament()" class="flex-1 bg-blue-600 text-white py-2 rounded font-medium">Speichern</button>
-                </div>
+                <button type="submit" id="saveBtn" class="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-semibold py-3 rounded-xl shadow-lg shadow-blue-500/30 transition transform active:scale-95">
+                    💾 In Cloud speichern
+                </button>
+                
+                <div id="errorMsg" class="hidden bg-red-900/50 border border-red-700 text-red-200 px-4 py-3 rounded-lg text-sm"></div>
+                <div id="successMsg" class="hidden bg-green-900/50 border border-green-700 text-green-200 px-4 py-3 rounded-lg text-sm"></div>
+            </form>
+        </section>
+
+        <!-- Liste -->
+        <section class="space-y-4">
+            <div class="flex justify-between items-center mb-2">
+                <h2 class="text-lg font-semibold flex items-center gap-2">
+                    <span class="text-2xl">📦</span> Lagerbestand
+                </h2>
+                <span id="countBadge" class="bg-gray-700 text-xs px-3 py-1 rounded-full">0 Spulen</span>
             </div>
-        </div>
-    </div>
-
-    <!-- Form: Verbrauch buchen -->
-    <div id="consume-form" class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
-        <div class="bg-white w-full max-w-lg rounded-t-2xl sm:rounded-2xl p-6 slide-up">
-            <h2 class="text-xl font-bold mb-4">Verbrauch buchen</h2>
-            <input type="hidden" id="c-filament-id">
             
-            <div class="mb-4 p-3 bg-gray-100 rounded-lg">
-                <div class="font-bold" id="c-filament-info"></div>
-                <div class="text-sm text-gray-600">Aktueller Bestand: <span id="c-current-weight"></span>g</div>
-            </div>
-
-            <div class="space-y-4">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Projekt</label>
-                    <select id="c-project" class="w-full border rounded p-2 mb-2">
-                        <option value="">-- Projekt wählen --</option>
-                    </select>
-                    <button onclick="quickAddProject()" class="text-sm text-blue-600 underline">+ Neues Projekt anlegen</button>
-                </div>
-
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Verbrauch (g)</label>
-                    <div class="flex gap-2">
-                        <input type="number" id="c-amount" class="flex-1 border rounded p-2" placeholder="z.B. 50">
-                        <button onclick="setFullSpool()" class="px-3 bg-gray-200 rounded text-sm">Volle Spule</button>
-                    </div>
-                </div>
-
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Notiz (optional)</label>
-                    <input type="text" id="c-note" class="w-full border rounded p-2" placeholder="z.B. Druck: Benchy">
-                </div>
-
-                <div class="flex gap-2 pt-2">
-                    <button onclick="closeConsumeForm()" class="flex-1 bg-gray-300 text-gray-700 py-2 rounded">Abbrechen</button>
-                    <button onclick="saveConsumption()" class="flex-1 bg-orange-600 text-white py-2 rounded font-medium">Buchen</button>
+            <div id="filamentList" class="space-y-3 max-h-[600px] overflow-y-auto pr-2">
+                <div class="text-center text-gray-500 py-12 glass rounded-2xl">
+                    <div class="text-4xl mb-2">📭</div>
+                    <p>Lade...</p>
                 </div>
             </div>
-        </div>
-    </div>
-
-    <!-- Form: Projekt anlegen -->
-    <div id="project-form" class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
-        <div class="bg-white w-full max-w-lg rounded-t-2xl sm:rounded-2xl p-6 slide-up">
-            <h2 class="text-xl font-bold mb-4">Neues Projekt</h2>
-            <div class="space-y-4">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Projektname</label>
-                    <input type="text" id="p-name" class="w-full border rounded p-2" placeholder="z.B. RC Auto">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Beschreibung</label>
-                    <textarea id="p-desc" class="w-full border rounded p-2" rows="2"></textarea>
-                </div>
-                <div class="flex gap-2">
-                    <button onclick="closeProjectForm()" class="flex-1 bg-gray-300 text-gray-700 py-2 rounded">Abbrechen</button>
-                    <button onclick="saveProject()" class="flex-1 bg-purple-600 text-white py-2 rounded">Anlegen</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- QR-Code Print Modal -->
-    <div id="print-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl p-6 max-w-sm w-full">
-            <h2 class="text-xl font-bold mb-4">Etikett drucken</h2>
-            <div id="qrcode" class="flex justify-center mb-4"></div>
-            <div class="text-center text-sm text-gray-600 mb-4" id="qr-filament-info"></div>
-            <div class="flex gap-2">
-                <button onclick="closePrintModal()" class="flex-1 bg-gray-300 text-gray-700 py-2 rounded">Schließen</button>
-                <button onclick="window.print()" class="flex-1 bg-blue-600 text-white py-2 rounded">🖨️ Drucken</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Print Area (hidden) -->
-    <div id="print-area" class="hidden-force">
-        <div class="print-label">
-            <div class="flex items-center justify-between h-full">
-                <div class="flex-1">
-                    <div class="font-bold text-lg" id="print-brand">Brand</div>
-                    <div class="text-sm" id="print-material">PLA</div>
-                    <div class="text-sm font-bold" id="print-color">Color</div>
-                    <div class="text-xs text-gray-500 mt-1" id="print-weight">1000g</div>
-                </div>
-                <div id="print-qr"></div>
-            </div>
-        </div>
-    </div>
+        </section>
+    </main>
 
     <script>
-        // Datenbank Setup
-        const db = new Dexie("FilamentManager");
-        db.version(1).stores({
-            filaments: '++id, barcode, brand, material, color, weight, created',
-            projects: '++id, name, created',
-            consumption: '++id, filamentId, projectId, amount, date, note'
-        });
-
-        let currentFilter = 'all';
-        let html5QrCode = null;
-
-        // Tara-Datenbank (basierend auf Recherche)
-        const taraDB = {
-            'prusament': { name: 'Prusament', tara: 201, type: 'plastic' },
-            'esun': { name: 'eSun', tara: 230, type: 'plastic' },
-            'sunlu': { name: 'Sunlu', tara: 140, type: 'plastic' },
-            'overture': { name: 'Overture', tara: 237, type: 'plastic' },
-            'hatchbox': { name: 'Hatchbox', tara: 235, type: 'plastic' },
-            'polyterra': { name: 'PolyTerra', tara: 139, type: 'cardboard' },
-            '3djake_eco': { name: '3DJake Eco', tara: 209, type: 'cardboard' },
-            'elegoo_card': { name: 'Elegoo Cardboard', tara: 145, type: 'cardboard' },
-            'generic_plastic': { name: 'Standard Kunststoff', tara: 220, type: 'plastic' },
-            'generic_cardboard': { name: 'Standard Pappe', tara: 145, type: 'cardboard' }
+        // 🔥 DEINE FIREBASE CONFIG
+        const firebaseConfig = {
+            apiKey: "AIzaSyAJGvTa_gPsUjmvlzIzTt1Nca1uC5Uzn7xs",
+            authDomain: "filatest-9a091.firebaseapp.com",
+            projectId: "filatest-9a091",
+            storageBucket: "filatest-9a091.firebasestorage.app",
+            messagingSenderId: "179130030606",
+            appId: "1:179130030606:web:013d6d598645abdf6cfa5f",
+            measurementId: "G-39HJ2T0XFD"
         };
 
-        // Tab Wechsel
-        function showTab(tab) {
-            ['inventory', 'projects', 'stats'].forEach(t => {
-                document.getElementById('tab-' + t).classList.add('hidden');
-            });
-            document.getElementById('tab-' + tab).classList.remove('hidden');
-            
-            if (tab === 'stats') loadStats();
-            if (tab === 'projects') loadProjects();
-            if (tab === 'inventory') loadFilaments();
-        }
+        let db = null;
+        let filaments = [];
 
-        // Scanner Funktionen
-        async function startScan() {
-            document.getElementById('scanner-modal').classList.remove('hidden');
-            html5QrCode = new Html5Qrcode("reader");
+        // Initialisierung
+        window.onload = function() {
             try {
-                await html5QrCode.start(
-                    { facingMode: "environment" },
-                    { fps: 10, qrbox: { width: 250, height: 250 } },
-                    (decodedText) => handleBarcode(decodedText),
-                    () => {}
-                );
-            } catch (err) {
-                alert("Kamera-Fehler: " + err);
+                firebase.initializeApp(firebaseConfig);
+                db = firebase.firestore();
+                console.log('✅ Firebase verbunden');
+                updateStatus('online');
+                loadData();
+                
+                // Echtzeit-Updates
+                db.collection('Filatest').onSnapshot(() => {
+                    loadData();
+                });
+                
+            } catch(e) {
+                console.error('Firebase Fehler:', e);
+                updateStatus('error');
+                document.getElementById('filamentList').innerHTML = `
+                    <div class="text-center text-red-400 py-12 glass rounded-2xl">
+                        <div class="text-4xl mb-2">⚠️</div>
+                        <p>Fehler: ${e.message}</p>
+                    </div>`;
             }
-        }
+        };
 
-        async function stopScan() {
-            if (html5QrCode) {
-                await html5QrCode.stop();
-                document.getElementById('scanner-modal').classList.add('hidden');
-            }
-        }
-
-        async function handleBarcode(barcode) {
-            stopScan();
-            const existing = await db.filaments.where('barcode').equals(barcode).first();
+        function updateStatus(mode) {
+            const indicator = document.querySelector('#connectionStatus span:first-child');
+            const text = document.getElementById('statusText');
             
-            if (existing) {
-                showConsumeForm(existing.id);
+            if (mode === 'online') {
+                indicator.className = 'w-2 h-2 rounded-full bg-green-500 animate-pulse';
+                text.textContent = 'Cloud';
             } else {
-                document.getElementById('f-barcode').value = barcode;
-                showAddForm();
+                indicator.className = 'w-2 h-2 rounded-full bg-red-500';
+                text.textContent = 'Fehler';
             }
         }
 
-        function showAddForm() {
-            document.getElementById('add-form').classList.remove('hidden');
+        function calculateNetto() {
+            const brutto = parseInt(document.getElementById('brutto').value) || 0;
+            const tara = parseInt(document.getElementById('tara').value) || 0;
+            const netto = Math.max(0, brutto - tara);
+            document.getElementById('nettoAnzeige').textContent = netto;
         }
 
-        function closeAddForm() {
-            document.getElementById('add-form').classList.add('hidden');
-            resetAddForm();
-        }
-
-        function resetAddForm() {
-            document.getElementById('f-barcode').value = '';
-            document.getElementById('f-brand').value = '';
-            document.getElementById('f-color').value = '';
-            document.getElementById('f-gross-weight').value = '';
-            document.getElementById('f-tara').value = '220';
-            document.getElementById('f-net-weight').textContent = '0';
-            document.getElementById('f-brand-select').value = '';
-            document.getElementById('f-nozzle').value = '';
-            document.getElementById('f-bed').value = '';
-        }
-
-        function setSpoolType(type) {
-            document.querySelectorAll('.spool-type-btn').forEach(btn => {
-                btn.classList.remove('border-blue-500');
-                btn.classList.add('border-gray-300');
-            });
-            event.target.closest('.spool-type-btn').classList.remove('border-gray-300');
-            event.target.closest('.spool-type-btn').classList.add('border-blue-500');
-            
-            const tara = type === 'plastic' ? 220 : 145;
-            document.getElementById('f-tara').value = tara;
-            calculateNet();
-        }
-
-        function updateTara() {
-            const select = document.getElementById('f-brand-select');
-            const option = select.options[select.selectedIndex];
-            if (option && option.dataset.tara) {
-                document.getElementById('f-tara').value = option.dataset.tara;
-                calculateNet();
-            }
-        }
-
-        function calculateNet() {
-            const gross = parseFloat(document.getElementById('f-gross-weight').value) || 0;
-            const tara = parseFloat(document.getElementById('f-tara').value) || 0;
-            const net = Math.max(0, gross - tara);
-            document.getElementById('f-net-weight').textContent = net;
+        function showMsg(msg, isError = false) {
+            const el = isError ? document.getElementById('errorMsg') : document.getElementById('successMsg');
+            const other = isError ? document.getElementById('successMsg') : document.getElementById('errorMsg');
+            other.classList.add('hidden');
+            el.textContent = msg;
+            el.classList.remove('hidden');
+            setTimeout(() => el.classList.add('hidden'), 4000);
         }
 
         async function saveFilament() {
-            const barcode = document.getElementById('f-barcode').value || Date.now().toString();
-            const brand = document.getElementById('f-brand').value;
-            const material = document.getElementById('f-material').value;
-            const color = document.getElementById('f-color').value;
-            const weight = parseInt(document.getElementById('f-net-weight').textContent) || 0;
-            const diameter = document.getElementById('f-diameter').value;
-            const nozzle = document.getElementById('f-nozzle').value;
-            const bed = document.getElementById('f-bed').value;
+            const btn = document.getElementById('saveBtn');
+            btn.innerHTML = '⏳ Speichere...';
+            btn.disabled = true;
 
-            if (!brand || !color || weight <= 0) {
-                alert('Bitte fülle alle Pflichtfelder aus (Hersteller, Farbe, Gewicht)');
-                return;
+            const data = {
+                Material: document.getElementById('material').value,
+                Color: document.getElementById('color').value,
+                Manufakturere: document.getElementById('manufacturer').value || 'Unbekannt',
+                Weightbrutto: parseInt(document.getElementById('brutto').value) || 0,
+                Spoolwright: parseInt(document.getElementById('tara').value) || 250,
+                Weightnetto: parseInt(document.getElementById('nettoAnzeige').textContent) || 0,
+                Zimestamp: new Date().toISOString()
+            };
+
+            try {
+                await db.collection('Filatest').add(data);
+                showMsg('✅ In Cloud gespeichert!');
+                document.getElementById('filamentForm').reset();
+                calculateNetto();
+                
+            } catch (error) {
+                showMsg('❌ Fehler: ' + error.message, true);
+                console.error(error);
+            } finally {
+                btn.innerHTML = '💾 In Cloud speichern';
+                btn.disabled = false;
             }
-
-            await db.filaments.add({
-                barcode,
-                brand,
-                material,
-                color,
-                weight,
-                diameter,
-                nozzleTemp: nozzle ? parseInt(nozzle) : null,
-                bedTemp: bed ? parseInt(bed) : null,
-                createdAt: new Date()
-            });
-
-            closeAddForm();
-            loadFilaments();
         }
 
-        async function loadFilaments(material) {
-            const filaments = await db.filaments.orderBy('createdAt').reverse().toArray();
-            const container = document.getElementById('filament-list');
+        async function loadData() {
+            try {
+                const snapshot = await db.collection('Filatest').get();
+                filaments = [];
+                snapshot.forEach(doc => {
+                    filaments.push({ id: doc.id, ...doc.data() });
+                });
+                renderList();
+            } catch (error) {
+                console.error('Ladefehler:', error);
+            }
+        }
+
+        function renderList() {
+            const container = document.getElementById('filamentList');
+            document.getElementById('countBadge').textContent = filaments.length + ' Spulen';
             
             if (filaments.length === 0) {
-                container.innerHTML = '<div class="text-center text-gray-500 py-8">Keine Filamente vorhanden</div>';
+                container.innerHTML = `
+                    <div class="text-center text-gray-500 py-12 glass rounded-2xl border border-gray-700 border-dashed">
+                        <div class="text-4xl mb-2 opacity-50">📭</div>
+                        <p class="text-sm">Noch keine Filamente</p>
+                    </div>`;
                 return;
             }
-            
-            container.innerHTML = filaments.map(f => `
-                <div class="bg-white p-4 rounded-xl shadow flex justify-between items-center">
-                    <div>
-                        <div class="font-bold">${f.brand} ${f.color}</div>
-                        <div class="text-sm text-gray-600">${f.material} · ${f.weight}g · ${f.diameter}mm</div>
-                        ${f.nozzleTemp ? `<div class="text-xs text-gray-500">${f.nozzleTemp}°C / ${f.bedTemp || '-'}°C Bed</div>` : ''}
-                    </div>
-                    <div class="flex gap-2">
-                        <button onclick="showConsumeForm(${f.id})" class="bg-blue-100 text-blue-700 px-3 py-1 rounded text-sm">Verbrauchen</button>
-                        <button onclick="printLabel(${f.id})" class="bg-gray-100 text-gray-700 px-3 py-1 rounded text-sm">Etikett</button>
+
+            container.innerHTML = filaments.map(fil => `
+                <div class="filament-card glass rounded-xl p-4 border border-gray-700 relative overflow-hidden">
+                    <div class="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-blue-500/20 to-purple-500/20 rounded-bl-full -mr-4 -mt-4"></div>
+                    
+                    <div class="relative flex justify-between items-start">
+                        <div>
+                            <div class="flex items-center gap-2 mb-1">
+                                <span class="text-lg font-bold text-white">${fil.Material}</span>
+                                <span class="text-sm text-gray-400">${fil.Color}</span>
+                            </div>
+                            <div class="text-xs text-gray-500 mb-2">${fil.Manufakturere}</div>
+                            
+                            <div class="flex items-center gap-3 mt-3">
+                                <div class="bg-gray-900 rounded-lg px-3 py-1.5 border border-gray-700">
+                                    <span class="text-xs text-gray-500 block">Verfügbar</span>
+                                    <span class="text-lg font-bold text-green-400">${fil.Weightnetto}g</span>
+                                </div>
+                                <div class="text-xs text-gray-600 leading-tight">
+                                    Brutto: ${fil.Weightbrutto}g<br>
+                                    Tara: ${fil.Spoolwright}g
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <button onclick="deleteFilament('${fil.id}')" class="text-gray-600 hover:text-red-400 transition p-2">🗑️</button>
                     </div>
                 </div>
             `).join('');
         }
 
-        function filterMaterial(mat) {
-            loadFilaments(mat);
-        }
-
-        function showConsumeForm(id) {
-            document.getElementById('c-filament-id').value = id;
-            document.getElementById('consume-form').classList.remove('hidden');
-        }
-
-        function closeConsumeForm() {
-            document.getElementById('consume-form').classList.add('hidden');
-        }
-
-        async function saveConsume() {
-            const filamentId = parseInt(document.getElementById('c-filament-id').value);
-            const amount = parseInt(document.getElementById('c-amount').value);
-
-            if (!amount || amount <= 0) {
-                alert('Bitte gib einen gültigen Verbrauch ein');
-                return;
+        async function deleteFilament(id) {
+            if (!confirm('Wirklich löschen?')) return;
+            try {
+                await db.collection('Filatest').doc(id).delete();
+            } catch (error) {
+                showMsg('Fehler beim Löschen: ' + error.message, true);
             }
-
-            const filament = await db.filaments.get(filamentId);
-            if (!filament) return;
-
-            const newWeight = filament.weight - amount;
-            
-            if (newWeight <= 0) {
-                await db.filaments.delete(filamentId);
-            } else {
-                await db.filaments.update(filamentId, { weight: newWeight });
-            }
-
-            closeConsumeForm();
-            loadFilaments();
         }
 
-        function showProjectForm() {
-            document.getElementById('project-form').classList.remove('hidden');
+        function exportData() {
+            const blob = new Blob([JSON.stringify(filaments, null, 2)], {type: 'application/json'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `filament-backup-${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
         }
 
-        function closeProjectForm() {
-            document.getElementById('project-form').classList.add('hidden');
-        }
-
-        async function saveProject() {
-            const name = document.getElementById('p-name').value;
-            const filamentType = document.getElementById('p-filament').value;
-            const weightNeeded = parseInt(document.getElementById('p-weight').value);
-
-            if (!name || !weightNeeded) {
-                alert('Bitte Name und Gewicht angeben');
-                return;
-            }
-
-            await db.projects.add({
-                name,
-                filamentType,
-                weightNeeded,
-                createdAt: new Date()
-            });
-
-            closeProjectForm();
-            loadProjects();
-        }
-
-        async function loadProjects() {
-            const projects = await db.projects.orderBy('createdAt').reverse().toArray();
-            const container = document.getElementById('project-list');
-            
-            if (projects.length === 0) {
-                container.innerHTML = '<div class="text-center text-gray-500 py-8">Keine Projekte vorhanden</div>';
-                return;
-            }
-            
-            container.innerHTML = projects.map(p => `
-                <div class="bg-white p-4 rounded-xl shadow">
-                    <div class="font-bold">${p.name}</div>
-                    <div class="text-sm text-gray-600">${p.filamentType} · ${p.weightNeeded}g benötigt</div>
-                </div>
-            `).join('');
-        }
-
-        async function loadStats() {
-            const filaments = await db.filaments.toArray();
-            const total = filaments.length;
-            const totalWeight = filaments.reduce((sum, f) => sum + f.weight, 0);
-            
-            document.getElementById('stat-total').textContent = total;
-            document.getElementById('stat-weight').textContent = totalWeight + 'g';
-            
-            const byMaterial = {};
-            filaments.forEach(f => {
-                byMaterial[f.material] = (byMaterial[f.material] || 0) + 1;
-            });
-            
-            const materialsContainer = document.getElementById('stat-materials');
-            materialsContainer.innerHTML = Object.entries(byMaterial)
-                .sort((a, b) => b[1] - a[1])
-                .map(([mat, count]) => `
-                    <div class="flex justify-between items-center">
-                        <span>${mat}</span>
-                        <span class="font-medium">${count} Spulen</span>
-                    </div>
-                `).join('');
-        }
-
-        async function printLabel(id) {
-            const filament = await db.filaments.get(id);
-            if (!filament) return;
-            
-            const printArea = document.getElementById('print-area');
-            printArea.innerHTML = `
-                <div class="print-label">
-                    <div style="font-size: 10px; font-weight: bold;">${filament.brand} ${filament.color}</div>
-                    <div style="font-size: 8px;">${filament.material} · ${filament.weight}g</div>
-                    <div id="qrcode" style="margin-top: 2mm;"></div>
-                </div>
-            `;
-            
-            new QRCode(document.getElementById('qrcode'), {
-                text: filament.barcode,
-                width: 50,
-                height: 50
-            });
-            
-            setTimeout(() => window.print(), 100);
-        }
-
-        document.addEventListener('DOMContentLoaded', () => {
-            loadFilaments();
-        });
+        calculateNetto();
     </script>
-    <script src="pwa-install.js"></script>
 </body>
 </html>
