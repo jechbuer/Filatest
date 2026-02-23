@@ -227,22 +227,28 @@ class FilamentApp {
         
         // Material-Filter anwenden
         if (this.currentFilter && this.currentFilter !== 'all') {
-            filtered = filtered.filter(f => 
-                f.Material && f.Material.toLowerCase() === this.currentFilter.toLowerCase()
-            );
+            filtered = filtered.filter(f => {
+                const material = (f.Material || '').toLowerCase();
+                return material === this.currentFilter.toLowerCase();
+            });
         }
         
         // Suchfilter anwenden
         if (this.searchQuery && this.searchQuery.trim() !== '') {
             const query = this.searchQuery.toLowerCase().trim();
             filtered = filtered.filter(f => {
-                const searchable = [
+                // Alle relevanten Felder durchsuchen
+                const fields = [
                     f.Material || '',
                     f.Color || '',
                     f.Manufakturere || '',
                     f.barcode || ''
-                ].join(' ').toLowerCase();
-                return searchable.includes(query);
+                ];
+                
+                // Prüfen ob Query in einem der Felder enthalten ist
+                return fields.some(field => 
+                    field.toString().toLowerCase().includes(query)
+                );
             });
         }
         
@@ -391,9 +397,23 @@ class FilamentApp {
     async loadStats() {
         try {
             const stats = await filamentService.getStats();
-            renderStats(stats);
+            renderStats(stats, 'statsContainer', true);
         } catch (error) {
             console.error('Fehler beim Laden der Statistiken:', error);
+        }
+    }
+
+    // Nach Material aus Statistik filtern
+    filterByMaterial(material) {
+        // Zum Lager-Tab wechseln
+        this.switchTab('inventory');
+        // Filter setzen
+        this.setFilter(material);
+        // Suche zurücksetzen
+        this.search('');
+        const searchInput = document.getElementById('searchInput');
+        if (searchInput) {
+            searchInput.value = '';
         }
     }
 

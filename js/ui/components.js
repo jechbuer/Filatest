@@ -288,7 +288,7 @@ export function updateBrandSelect(brands, selectId = 'f-brand-select') {
 }
 
 // Statistiken rendern
-export function renderStats(stats, containerId = 'statsContainer') {
+export function renderStats(stats, containerId = 'statsContainer', onMaterialClick = null) {
     const container = document.getElementById(containerId);
     if (!container) return;
     
@@ -297,11 +297,14 @@ export function renderStats(stats, containerId = 'statsContainer') {
         .map(([mat, count]) => {
             const weight = stats.weightByMaterial[mat] || 0;
             const percentage = stats.total > 0 ? Math.round((count / stats.total) * 100) : 0;
+            const clickable = onMaterialClick ? 'cursor-pointer hover:bg-gray-700/50 transition' : '';
+            const clickHandler = onMaterialClick ? `onclick="window.app.filterByMaterial('${mat}')"` : '';
             return `
-                <div class="flex justify-between items-center py-2 border-b border-gray-700 last:border-0">
+                <div class="flex justify-between items-center py-2 border-b border-gray-700 last:border-0 ${clickable} rounded px-2 -mx-2" ${clickHandler}>
                     <div class="flex items-center gap-2">
                         <span class="w-3 h-3 rounded-full" style="background: ${getMaterialColor(mat)}"></span>
                         <span class="text-sm">${escapeHtml(mat)}</span>
+                        ${onMaterialClick ? '<span class="text-xs text-gray-500">👆</span>' : ''}
                     </div>
                     <div class="text-right">
                         <span class="text-sm font-medium">${count} Spulen</span>
@@ -313,9 +316,10 @@ export function renderStats(stats, containerId = 'statsContainer') {
     
     container.innerHTML = `
         <div class="grid grid-cols-2 gap-4 mb-6">
-            <div class="glass rounded-xl p-4 text-center">
+            <div class="glass rounded-xl p-4 text-center cursor-pointer hover:bg-gray-800/50 transition" onclick="window.app.switchTab('inventory')">
                 <div class="text-3xl font-bold text-blue-400">${stats.total}</div>
                 <div class="text-xs text-gray-400">Spulen</div>
+                <div class="text-xs text-gray-500 mt-1">Zum Lager ➜</div>
             </div>
             <div class="glass rounded-xl p-4 text-center">
                 <div class="text-3xl font-bold text-green-400">${stats.totalWeight}g</div>
@@ -324,6 +328,7 @@ export function renderStats(stats, containerId = 'statsContainer') {
         </div>
         <div class="glass rounded-xl p-4">
             <h3 class="font-bold mb-3 text-gray-300">Material-Verteilung</h3>
+            <p class="text-xs text-gray-500 mb-2">Tippen um nach Material zu filtern</p>
             ${materialRows || '<p class="text-sm text-gray-500">Keine Daten verfügbar</p>'}
         </div>
     `;

@@ -63,11 +63,14 @@
                 <button data-tab="inventory" class="tab-btn active flex-1 py-2 text-sm font-medium text-gray-300 hover:text-white transition">
                     📦 Lager
                 </button>
+                <button data-tab="add" class="tab-btn flex-1 py-2 text-sm font-medium text-gray-300 hover:text-white transition">
+                    ➕ Neu
+                </button>
                 <button data-tab="stats" class="tab-btn flex-1 py-2 text-sm font-medium text-gray-300 hover:text-white transition">
                     📊 Statistik
                 </button>
                 <button data-tab="settings" class="tab-btn flex-1 py-2 text-sm font-medium text-gray-300 hover:text-white transition">
-                    ⚙️ Einstellungen
+                    ⚙️
                 </button>
             </div>
         </div>
@@ -78,9 +81,54 @@
         
         <!-- TAB: Lagerbestand -->
         <div id="tab-inventory" class="tab-content">
-            <div class="grid md:grid-cols-2 gap-6">
+            <div class="space-y-4">
+                <!-- Suche -->
+                <div class="relative">
+                    <input type="text" id="searchInput" 
+                           placeholder="Spule suchen (Material, Farbe, Hersteller, Barcode...)" 
+                           class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 pl-10 text-white focus:border-blue-500 transition">
+                    <span class="absolute left-3 top-3.5 text-gray-500">🔍</span>
+                    <span id="searchInfo" class="hidden absolute right-3 top-3.5 text-xs text-gray-500"></span>
+                </div>
+
+                <!-- Filter -->
+                <div class="flex gap-2 overflow-x-auto pb-2">
+                    <button data-filter="all" class="filter-btn px-4 py-1 rounded-full bg-blue-100 text-blue-800 text-sm whitespace-nowrap font-medium">
+                        Alle
+                    </button>
+                    <button data-filter="PLA" class="filter-btn px-4 py-1 rounded-full bg-gray-200 text-gray-700 text-sm whitespace-nowrap">
+                        PLA
+                    </button>
+                    <button data-filter="PETG" class="filter-btn px-4 py-1 rounded-full bg-gray-200 text-gray-700 text-sm whitespace-nowrap">
+                        PETG
+                    </button>
+                    <button data-filter="ABS" class="filter-btn px-4 py-1 rounded-full bg-gray-200 text-gray-700 text-sm whitespace-nowrap">
+                        ABS
+                    </button>
+                    <button data-filter="TPU" class="filter-btn px-4 py-1 rounded-full bg-gray-200 text-gray-700 text-sm whitespace-nowrap">
+                        TPU
+                    </button>
+                </div>
+
+                <div class="flex justify-between items-center">
+                    <h2 class="text-lg font-semibold flex items-center gap-2">
+                        <span class="text-2xl">📦</span> Lagerbestand
+                    </h2>
+                    <span id="countBadge" class="bg-gray-700 text-xs px-3 py-1 rounded-full">0 Spulen</span>
+                </div>
                 
-                <!-- Formular -->
+                <div id="filamentList" class="space-y-3 max-h-[600px] overflow-y-auto pr-2">
+                    <div class="text-center text-gray-500 py-12 glass rounded-2xl">
+                        <div class="text-4xl mb-2">📭</div>
+                        <p>Lade...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB: Neuanlage -->
+        <div id="tab-add" class="tab-content hidden">
+            <div class="max-w-2xl mx-auto">
                 <section class="glass rounded-2xl p-6 animate-in">
                     <div class="flex justify-between items-center mb-4">
                         <h2 class="text-lg font-semibold flex items-center gap-2">
@@ -179,51 +227,6 @@
                         <div id="errorMsg" class="hidden bg-red-900/50 border border-red-700 text-red-200 px-4 py-3 rounded-lg text-sm"></div>
                         <div id="successMsg" class="hidden bg-green-900/50 border border-green-700 text-green-200 px-4 py-3 rounded-lg text-sm"></div>
                     </form>
-                </section>
-
-                <!-- Liste -->
-                <section class="space-y-4">
-                    <!-- Suche -->
-                    <div class="relative">
-                        <input type="text" id="searchInput" 
-                               placeholder="🔍 Spule suchen..." 
-                               class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 pl-10 text-white focus:border-blue-500 transition">
-                        <span class="absolute left-3 top-3.5 text-gray-500">🔍</span>
-                        <span id="searchInfo" class="hidden absolute right-3 top-3.5 text-xs text-gray-500"></span>
-                    </div>
-
-                    <!-- Filter -->
-                    <div class="flex gap-2 overflow-x-auto pb-2">
-                        <button data-filter="all" class="filter-btn px-4 py-1 rounded-full bg-blue-100 text-blue-800 text-sm whitespace-nowrap font-medium">
-                            Alle
-                        </button>
-                        <button data-filter="PLA" class="filter-btn px-4 py-1 rounded-full bg-gray-200 text-gray-700 text-sm whitespace-nowrap">
-                            PLA
-                        </button>
-                        <button data-filter="PETG" class="filter-btn px-4 py-1 rounded-full bg-gray-200 text-gray-700 text-sm whitespace-nowrap">
-                            PETG
-                        </button>
-                        <button data-filter="ABS" class="filter-btn px-4 py-1 rounded-full bg-gray-200 text-gray-700 text-sm whitespace-nowrap">
-                            ABS
-                        </button>
-                        <button data-filter="TPU" class="filter-btn px-4 py-1 rounded-full bg-gray-200 text-gray-700 text-sm whitespace-nowrap">
-                            TPU
-                        </button>
-                    </div>
-
-                    <div class="flex justify-between items-center">
-                        <h2 class="text-lg font-semibold flex items-center gap-2">
-                            <span class="text-2xl">📦</span> Lagerbestand
-                        </h2>
-                        <span id="countBadge" class="bg-gray-700 text-xs px-3 py-1 rounded-full">0 Spulen</span>
-                    </div>
-                    
-                    <div id="filamentList" class="space-y-3 max-h-[600px] overflow-y-auto pr-2">
-                        <div class="text-center text-gray-500 py-12 glass rounded-2xl">
-                            <div class="text-4xl mb-2">📭</div>
-                            <p>Lade...</p>
-                        </div>
-                    </div>
                 </section>
             </div>
         </div>
