@@ -53,6 +53,42 @@ class FilamentService {
         }
     }
 
+    // Nach Text suchen (Hersteller, Material, Farbe, Barcode)
+    async search(query) {
+        try {
+            if (!query || query.trim() === '') {
+                return this.getAll();
+            }
+            
+            const db = getDb();
+            const searchTerm = query.toLowerCase().trim();
+            
+            // Alle Filamente laden und client-seitig filtern
+            // (Firestore hat keine echte Volltextsuche)
+            const snapshot = await db.collection(this.collectionName).get();
+            const filaments = [];
+            
+            snapshot.forEach(doc => {
+                const data = doc.data();
+                const searchableText = [
+                    data.Material || '',
+                    data.Color || '',
+                    data.Manufakturere || '',
+                    data.barcode || ''
+                ].join(' ').toLowerCase();
+                
+                if (searchableText.includes(searchTerm)) {
+                    filaments.push({ id: doc.id, ...data });
+                }
+            });
+            
+            return filaments;
+        } catch (error) {
+            console.error('Fehler bei der Suche:', error);
+            throw error;
+        }
+    }
+
     // Neues Filament speichern
     async create(filamentData) {
         try {

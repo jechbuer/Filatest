@@ -1,5 +1,121 @@
 // 🎨 UI-Komponenten
 
+// Sound-Player für KaChing
+class SoundPlayer {
+    constructor() {
+        this.enabled = true;
+        this.volume = 0.5;
+        this.audioContext = null;
+    }
+
+    // AudioContext initialisieren (muss nach User-Interaction erfolgen)
+    init() {
+        if (!this.audioContext) {
+            this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (this.audioContext.state === 'suspended') {
+            this.audioContext.resume();
+        }
+    }
+
+    // KaChing Sound generieren
+    playKaChing() {
+        if (!this.enabled) return;
+        
+        this.init();
+        
+        const ctx = this.audioContext;
+        const now = ctx.currentTime;
+        
+        // "Ka" - höherer Ton
+        const osc1 = ctx.createOscillator();
+        const gain1 = ctx.createGain();
+        osc1.type = 'sine';
+        osc1.frequency.setValueAtTime(1200, now);
+        osc1.frequency.exponentialRampToValueAtTime(800, now + 0.1);
+        gain1.gain.setValueAtTime(this.volume * 0.3, now);
+        gain1.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+        osc1.connect(gain1);
+        gain1.connect(ctx.destination);
+        osc1.start(now);
+        osc1.stop(now + 0.15);
+        
+        // "Ching" - tieferer, längerer Ton
+        const osc2 = ctx.createOscillator();
+        const gain2 = ctx.createGain();
+        osc2.type = 'sine';
+        osc2.frequency.setValueAtTime(600, now + 0.1);
+        osc2.frequency.exponentialRampToValueAtTime(300, now + 0.4);
+        gain2.gain.setValueAtTime(this.volume * 0.4, now + 0.1);
+        gain2.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+        osc2.connect(gain2);
+        gain2.connect(ctx.destination);
+        osc2.start(now + 0.1);
+        osc2.stop(now + 0.5);
+        
+        // Metallischer Klang (Obertöne)
+        const osc3 = ctx.createOscillator();
+        const gain3 = ctx.createGain();
+        osc3.type = 'triangle';
+        osc3.frequency.setValueAtTime(1800, now);
+        osc3.frequency.exponentialRampToValueAtTime(1200, now + 0.2);
+        gain3.gain.setValueAtTime(this.volume * 0.1, now);
+        gain3.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+        osc3.connect(gain3);
+        gain3.connect(ctx.destination);
+        osc3.start(now);
+        osc3.stop(now + 0.25);
+    }
+
+    // Kurzer Erfolgs-Sound
+    playSuccess() {
+        if (!this.enabled) return;
+        this.init();
+        
+        const ctx = this.audioContext;
+        const now = ctx.currentTime;
+        
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(600, now);
+        osc.frequency.exponentialRampToValueAtTime(900, now + 0.1);
+        gain.gain.setValueAtTime(this.volume * 0.2, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.2);
+    }
+
+    // Fehler-Sound
+    playError() {
+        if (!this.enabled) return;
+        this.init();
+        
+        const ctx = this.audioContext;
+        const now = ctx.currentTime;
+        
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(150, now);
+        osc.frequency.linearRampToValueAtTime(100, now + 0.3);
+        gain.gain.setValueAtTime(this.volume * 0.2, now);
+        gain.gain.linearRampToValueAtTime(0.01, now + 0.3);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.3);
+    }
+
+    enable() { this.enabled = true; }
+    disable() { this.enabled = false; }
+    toggle() { this.enabled = !this.enabled; return this.enabled; }
+}
+
+export const soundPlayer = new SoundPlayer();
+
 // Status-Badge aktualisieren
 export function updateConnectionStatus(mode, text = null) {
     const indicator = document.querySelector('#connectionStatus span:first-child');
@@ -78,7 +194,8 @@ export function renderFilamentList(filaments, containerId = 'filamentList', coun
                         <span class="text-lg font-bold text-white">${escapeHtml(fil.Material || 'Unbekannt')}</span>
                         <span class="text-sm text-gray-400 truncate">${escapeHtml(fil.Color || '')}</span>
                     </div>
-                    <div class="text-xs text-gray-500 mb-2">${escapeHtml(fil.Manufakturere || 'Unbekannter Hersteller')}</div>
+                    <div class="text-xs text-gray-500 mb-1">${escapeHtml(fil.Manufakturere || 'Unbekannter Hersteller')}</div>
+                    ${fil.barcode ? `<div class="text-xs text-blue-400 font-mono mb-2">📷 ${escapeHtml(fil.barcode)}</div>` : ''}
                     
                     <div class="flex items-center gap-3 mt-3">
                         <div class="bg-gray-900 rounded-lg px-3 py-1.5 border border-gray-700">
@@ -225,6 +342,7 @@ export function showConsumeModal(filament, onConfirm) {
             <div class="bg-gray-800 rounded-lg p-4 mb-4">
                 <div class="font-bold text-white">${escapeHtml(filament.Material)} ${escapeHtml(filament.Color)}</div>
                 <div class="text-sm text-gray-400">${escapeHtml(filament.Manufakturere || '')}</div>
+                ${filament.barcode ? `<div class="text-xs text-blue-400 font-mono mt-1">📷 ${escapeHtml(filament.barcode)}</div>` : ''}
                 <div class="text-sm mt-2">
                     Aktueller Bestand: <span class="font-bold text-green-400">${filament.Weightnetto}g</span>
                 </div>

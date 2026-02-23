@@ -10,7 +10,8 @@ import {
     updateBrandSelect,
     renderStats,
     showConsumeModal,
-    setButtonLoading
+    setButtonLoading,
+    soundPlayer
 } from './ui/components.js';
 import { BarcodeScanner } from './ui/scanner.js';
 
@@ -22,6 +23,8 @@ class FilamentApp {
         this.scanner = null;
         this.unsubscribe = null;
         this.currentFilter = 'all';
+        this.searchQuery = '';
+        this.searchTimeout = null;
     }
 
     // App initialisieren
@@ -126,6 +129,30 @@ class FilamentApp {
                 this.setFilter(filter);
             });
         });
+
+        // Suche
+        const searchInput = document.getElementById('searchInput');
+        if (searchInput) {
+            searchInput.addEventListener('input', (e) => {
+                clearTimeout(this.searchTimeout);
+                this.searchTimeout = setTimeout(() => {
+                    this.search(e.target.value);
+                }, 300);
+            });
+        }
+
+        // Sound Toggle
+        const soundToggle = document.getElementById('soundToggle');
+        if (soundToggle) {
+            soundToggle.addEventListener('change', (e) => {
+                if (e.target.checked) {
+                    soundPlayer.enable();
+                    soundPlayer.playSuccess();
+                } else {
+                    soundPlayer.disable();
+                }
+            });
+        }
     }
 
     // Tara aktualisieren basierend auf Hersteller
@@ -165,10 +192,12 @@ class FilamentApp {
                 Weightbrutto: parseInt(document.getElementById('brutto').value) || 0,
                 Spoolwright: parseInt(document.getElementById('tara').value) || 250,
                 Weightnetto: parseInt(document.getElementById('nettoAnzeige').textContent) || 0,
+                barcode: document.getElementById('barcode').value || null,
                 Zimestamp: new Date().toISOString()
             };
 
             await filamentService.create(data);
+            soundPlayer.playSuccess();
             showMessage('✅ Filament gespeichert!');
             
             // Formular zurücksetzen
@@ -192,17 +221,49 @@ class FilamentApp {
         }
     }
 
-    // Liste rendern (mit Filter)
+    // Liste rendern (mit Filter und Suche)
     renderList() {
         let filtered = this.filaments;
         
+        // Material-Filter anwenden
         if (this.currentFilter && this.currentFilter !== 'all') {
-            filtered = this.filaments.filter(f => 
+            filtered = filtered.filter(f => 
                 f.Material && f.Material.toLowerCase() === this.currentFilter.toLowerCase()
             );
         }
         
+        // Suchfilter anwenden
+        if (this.searchQuery && this.searchQuery.trim() !== '') {
+            const query = this.searchQuery.toLowerCase().trim();
+            filtered = filtered.filter(f => {
+                const searchable = [
+                    f.Material || '',
+                    f.Color || '',
+                    f.Manufakturere || '',
+                    f.barcode || ''
+                ].join(' ').toLowerCase();
+                return searchable.includes(query);
+            });
+        }
+        
         renderFilamentList(filtered);
+        
+        // Suchergebnis-Info aktualisieren
+        const searchInfo = document.getElementById('searchInfo');
+        if (searchInfo) {
+            if (this.searchQuery && this.searchQuery.trim() !== '') {
+                searchInfo.textContent = `${filtered.length} von ${this.filaments.length} Spulen`;
+                searchInfo.classList.remove('hidden');
+            } else {
+                searchInfo.classList.add('hidden');
+            }
+        }
+    }
+
+    // Suche durchführen
+    search(query) {
+        this.searchQuery = query;
+        this.renderList();
     }
 
     // Filter setzen
@@ -229,8 +290,10 @@ class FilamentApp {
         
         try {
             await filamentService.delete(id);
+            soundPlayer.playSuccess();
             showMessage('🗑️ Filament gelöscht');
         } catch (error) {
+            soundPlayer.playError();
             showMessage('Fehler beim Löschen: ' + error.message, true);
         }
     }
@@ -244,12 +307,16 @@ class FilamentApp {
             try {
                 const result = await filamentService.consume(id, amount);
                 
+                // 🎵 KaChing Sound abspielen
+                soundPlayer.playKaChing();
+                
                 if (result.deleted) {
                     showMessage('🗑️ Spule aufgebraucht und entfernt');
                 } else {
                     showMessage(`✅ ${amount}g verbucht. Verbleibend: ${result.newWeight}g`);
                 }
             } catch (error) {
+                soundPlayer.playError();
                 showMessage('Fehler beim Buchen: ' + error.message, true);
             }
         });
