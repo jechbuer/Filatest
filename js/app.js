@@ -6,6 +6,7 @@ import { filamentDictionary } from './services/filamentDictionary.js';
 import { consumptionLogService } from './services/consumptionLog.js';
 import { labelPrinter } from './services/labelPrinter.js';
 import { lowStockAlert } from './services/lowStockAlert.js';
+import { shareService } from './services/shareService.js';
 import { 
     updateConnectionStatus, 
     showMessage, 
@@ -64,6 +65,12 @@ class FilamentApp {
             
             // Niedrigen Bestand prüfen
             this.checkLowStock();
+            
+            // Offline/Online Status überwachen
+            this.setupNetworkMonitoring();
+            
+            // Shared Data verarbeiten
+            this.handleSharedData();
             
             updateConnectionStatus('online');
             console.log('✅ App initialisiert');
@@ -763,6 +770,74 @@ class FilamentApp {
         }
     }
 
+    // Filament teilen
+    async shareFilament(id) {
+        const filament = this.filaments.find(f => f.id === id);
+        if (!filament) return;
+        
+        const success = await shareService.shareFilament(filament);
+        if (success) {
+            soundPlayer.playSuccess();
+        }
+    }
+
+    // Netzwerk-Status überwachen
+    setupNetworkMonitoring() {
+        // Online/Offline Events
+        window.addEventListener('online', () => {
+            console.log('🌐 Online');
+            this.showOfflineIndicator(false);
+            showMessage('🌐 Wieder online', false, 2000);
+            
+            // Sync auslösen
+            if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+                navigator.serviceWorker.controller.postMessage({
+                    type: 'SYNC_FILAMENT',
+                    payload: { action: 'sync-all' }
+                });
+            }
+        });
+        
+        window.addEventListener('offline', () => {
+            console.log('📴 Offline');
+            this.showOfflineIndicator(true);
+            showMessage('📴 Offline-Modus', false, 3000);
+        });
+        
+        // Initialer Status
+        if (!navigator.onLine) {
+            this.showOfflineIndicator(true);
+        }
+    }
+
+    // Offline-Indikator anzeigen/verstecken
+    showOfflineIndicator(show) {
+        let indicator = document.getElementById('offline-indicator');
+        
+        if (show) {
+            if (!indicator) {
+                indicator = document.createElement('div');
+                indicator.id = 'offline-indicator';
+                indicator.className = 'fixed top-16 left-1/2 transform -translate-x-1/2 z-50 bg-yellow-600 text-white px-3 py-1 rounded-full text-xs font-medium shadow-lg flex items-center gap-2 animate-in';
+                indicator.innerHTML = '📴 Offline';
+                document.body.appendChild(indicator);
+            }
+            indicator.classList.remove('hidden');
+        } else if (indicator) {
+            indicator.classList.add('hidden');
+        }
+    }
+
+    // Empfangene Share-Daten verarbeiten
+    async handleSharedData() {
+        const sharedData = await shareService.handleSharedData();
+        if (sharedData) {
+            console.log('📥 Shared data:', sharedData);
+            // Hier könnte man die Daten verarbeiten
+            showMessage('📥 Geteilte Daten empfangen', false, 3000);
+        }
+    }
+
     // Einstellungen laden
     loadSettings() {
         const container = document.getElementById('lowStockSettings');
@@ -777,6 +852,40 @@ class FilamentApp {
                 });
             }
         }
+    }
+
+    // Alle Filamente teilen
+    async shareAllFilaments() {
+        if (this.filaments.length === 0) {
+            showMessage('Keine Filamente zum Teilen', true);
+            return;
+        }
+        
+        const success = await shareService.shareFilamentList(
+            this.filaments, 
+            'Mein Filament-Lager'
+        );
+        
+        if (success) {
+            soundPlayer.playSuccess();
+        }
+    }
+
+    // Alle Etiketten exportieren
+    async exportAllLabels() {
+        if (this.filaments.length === 0) {
+            showMessage('Keine Filamente', true);
+            return;
+        }
+        
+        // Label für jede Spule generieren
+        for (const filament of this.filaments) {
+            await shareService.shareLabel(filament);
+            // Kurze Pause zwischen Downloads
+            await new Promise(r => setTimeout(r, 500));
+        }
+        
+        showMessage('🏷️ Alle Etiketten generiert');
     }
 
     // App aufräumen

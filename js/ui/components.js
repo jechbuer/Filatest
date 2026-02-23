@@ -226,19 +226,24 @@ export function renderFilamentList(filaments, containerId = 'filamentList', coun
                     </div>
                 </div>
                 
-                <div class="flex flex-col gap-2 ml-2">
+                <div class="flex flex-col gap-1 ml-1">
                     <button onclick="window.app.consumeFilament('${fil.id}')" 
-                            class="text-gray-400 hover:text-orange-400 transition p-2" 
+                            class="text-gray-400 hover:text-orange-400 transition p-1.5 text-sm" 
                             title="Verbrauch buchen">
                         📉
                     </button>
                     <button onclick="window.app.printLabel('${fil.id}')" 
-                            class="text-gray-400 hover:text-blue-400 transition p-2" 
+                            class="text-gray-400 hover:text-blue-400 transition p-1.5 text-sm" 
                             title="Etikett drucken">
                         🏷️
                     </button>
+                    <button onclick="window.app.shareFilament('${fil.id}')" 
+                            class="text-gray-400 hover:text-green-400 transition p-1.5 text-sm" 
+                            title="Teilen">
+                        📤
+                    </button>
                     <button onclick="window.app.deleteFilament('${fil.id}')" 
-                            class="text-gray-400 hover:text-red-400 transition p-2" 
+                            class="text-gray-400 hover:text-red-400 transition p-1.5 text-sm" 
                             title="Löschen">
                         🗑️
                     </button>

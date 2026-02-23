@@ -42,6 +42,9 @@
                         <span class="w-1.5 h-1.5 rounded-full bg-yellow-500 animate-pulse"></span>
                         <span id="statusText" class="hidden sm:inline">Verbinde...</span>
                     </span>
+                    <button id="installBtn" class="hidden p-1.5 hover:bg-gray-800 rounded-md transition text-xs" title="App installieren">
+                        📲
+                    </button>
                     <button id="exportBtn" class="p-1.5 hover:bg-gray-800 rounded-md transition text-xs" title="Backup">
                         💾
                     </button>
@@ -239,10 +242,24 @@
 
         <!-- TAB: Statistik -->
         <div id="tab-stats" class="tab-content hidden">
-            <div id="statsContainer" class="animate-in">
-                <div class="glass rounded-2xl p-8 text-center">
-                    <div class="text-4xl mb-4">📊</div>
-                    <p class="text-gray-400">Statistiken werden geladen...</p>
+            <div class="animate-in space-y-4">
+                <!-- Teilen Button -->
+                <div class="flex gap-2">
+                    <button onclick="window.app.shareAllFilaments()" 
+                            class="flex-1 bg-green-600 hover:bg-green-500 text-white py-2 rounded-lg text-xs font-medium transition flex items-center justify-center gap-2">
+                        📤 Lager teilen
+                    </button>
+                    <button onclick="window.app.exportAllLabels()" 
+                            class="flex-1 bg-blue-600 hover:bg-blue-500 text-white py-2 rounded-lg text-xs font-medium transition flex items-center justify-center gap-2">
+                        🏷️ Alle Etiketten
+                    </button>
+                </div>
+                
+                <div id="statsContainer">
+                    <div class="glass rounded-xl p-8 text-center">
+                        <div class="text-4xl mb-4">📊</div>
+                        <p class="text-gray-400">Statistiken werden geladen...</p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -395,15 +412,82 @@
     <!-- Haupt-App Script -->
     <script type="module" src="js/app.js"></script>
     
-    <!-- PWA Install -->
-    <script src="pwa-install.js"></script>
-    
-    <!-- Service Worker -->
+    <!-- PWA Install & Service Worker -->
     <script>
+        // Service Worker registrieren
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js')
-                .then(reg => console.log('✅ Service Worker registriert'))
-                .catch(err => console.log('❌ SW Fehler:', err));
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js')
+                    .then(registration => {
+                        console.log('✅ SW registriert:', registration.scope);
+                        
+                        // Auf Updates prüfen
+                        registration.addEventListener('updatefound', () => {
+                            const newWorker = registration.installing;
+                            newWorker.addEventListener('statechange', () => {
+                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                    // Neue Version verfügbar
+                                    if (confirm('🔄 Neue Version verfügbar! Jetzt aktualisieren?')) {
+                                        newWorker.postMessage({ type: 'SKIP_WAITING' });
+                                        window.location.reload();
+                                    }
+                                }
+                            });
+                        });
+                    })
+                    .catch(err => console.log('❌ SW Fehler:', err));
+            });
+        }
+
+        // App Install Button
+        let deferredPrompt;
+        const installBtn = document.getElementById('installBtn');
+        
+        window.addEventListener('beforeinstallprompt', (e) => {
+            // Event speichern
+            deferredPrompt = e;
+            // Button anzeigen
+            installBtn.classList.remove('hidden');
+        });
+        
+        installBtn?.addEventListener('click', async () => {
+            if (!deferredPrompt) return;
+            
+            // Installations-Prompt anzeigen
+            deferredPrompt.prompt();
+            
+            // Warten auf Benutzer-Antwort
+            const { outcome } = await deferredPrompt.userChoice;
+            
+            if (outcome === 'accepted') {
+                console.log('✅ Benutzer hat Installation akzeptiert');
+                installBtn.classList.add('hidden');
+            } else {
+                console.log('❌ Benutzer hat Installation abgelehnt');
+            }
+            
+            deferredPrompt = null;
+        });
+        
+        window.addEventListener('appinstalled', () => {
+            console.log('✅ App installiert');
+            installBtn.classList.add('hidden');
+            deferredPrompt = null;
+        });
+        
+        // iOS Install Hinweis
+        if (/iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream) {
+            if (!window.navigator.standalone) {
+                // Zeige iOS Install Hinweis
+                setTimeout(() => {
+                    const hint = document.createElement('div');
+                    hint.className = 'fixed bottom-20 left-4 right-4 bg-blue-600 text-white px-4 py-3 rounded-lg shadow-lg z-50 text-sm';
+                    hint.innerHTML = '📲 Tippe auf <b>Teilen</b> und dann <b>Zum Home-Bildschirm</b> um die App zu installieren';
+                    document.body.appendChild(hint);
+                    
+                    setTimeout(() => hint.remove(), 8000);
+                }, 2000);
+            }
         }
     </script>
 </body>

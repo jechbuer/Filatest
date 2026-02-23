@@ -1,14 +1,17 @@
 {
-  "name": "Filament Store",
-  "short_name": "Filament",
-  "description": "3D-Drucker Filament Manager mit Barcode-Scanning und Lager-Verwaltung",
+  "name": "JB Filament Store - Filatest Pro",
+  "short_name": "Filatest",
+  "description": "3D-Drucker Filament Manager mit Cloud-Sync, Verbrauchs-Tracking und Etiketten-Druck",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#3b82f6",
+  "background_color": "#0f172a",
   "theme_color": "#3b82f6",
   "orientation": "portrait-primary",
   "scope": "/",
+  "id": "filatest-pro-v1",
   "lang": "de",
+  "dir": "ltr",
+  "categories": ["productivity", "utilities"],
   "icons": [
     {
       "src": "icons/icon-72x72.png",
@@ -59,39 +62,55 @@
       "purpose": "maskable any"
     }
   ],
-  "categories": ["utilities", "productivity"],
   "screenshots": [
     {
-      "src": "screenshots/mobile-inventory.png",
-      "sizes": "750x1334",
+      "src": "screenshots/inventory.png",
+      "sizes": "1280x720",
       "type": "image/png",
-      "form_factor": "narrow",
-      "label": "Lager-Übersicht auf Mobilgerät"
+      "form_factor": "wide",
+      "label": "Lagerbestand Übersicht"
     },
     {
-      "src": "screenshots/mobile-scan.png",
+      "src": "screenshots/mobile.png",
       "sizes": "750x1334",
       "type": "image/png",
       "form_factor": "narrow",
-      "label": "Barcode-Scanner"
+      "label": "Mobile Ansicht"
     }
   ],
   "shortcuts": [
     {
       "name": "Neues Filament",
-      "short_name": "Hinzufügen",
-      "description": "Schnell neues Filament hinzufügen",
+      "short_name": "Neu",
+      "description": "Schnell ein neues Filament hinzufügen",
       "url": "/?action=add",
-      "icons": [{ "src": "icons/icon-96x96.png", "sizes": "96x96" }]
+      "icons": [{ "src": "icons/shortcut-add.png", "sizes": "96x96" }]
     },
     {
-      "name": "Scanner",
-      "short_name": "Scannen",
-      "description": "Barcode scannen",
+      "name": "Barcode scannen",
+      "short_name": "Scan",
+      "description": "Filament per Barcode hinzufügen",
       "url": "/?action=scan",
-      "icons": [{ "src": "icons/icon-96x96.png", "sizes": "96x96" }]
+      "icons": [{ "src": "icons/shortcut-scan.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Statistik",
+      "short_name": "Stats",
+      "description": "Verbrauchsstatistik anzeigen",
+      "url": "/?tab=stats",
+      "icons": [{ "src": "icons/shortcut-stats.png", "sizes": "96x96" }]
     }
   ],
+  "share_target": {
+    "action": "/",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "title": "name",
+      "text": "description",
+      "url": "link"
+    }
+  },
   "related_applications": [],
   "prefer_related_applications": false
 }
