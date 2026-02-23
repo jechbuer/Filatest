@@ -1,18 +1,18 @@
-// Service Worker deaktiviert - App läuft nur online
-self.addEventListener('install', (event) => {
+// Service Worker DEAKTIVIERT
+// Dieser SW entregistriert sich selbst und löscht alle Caches
+
+self.addEventListener('install', () => {
     self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
-    // Alle Caches löschen
     event.waitUntil(
         caches.keys().then((cacheNames) => {
             return Promise.all(
                 cacheNames.map((cacheName) => caches.delete(cacheName))
             );
-        })
+        }).then(() => self.clients.claim())
     );
-    self.clients.claim();
 });
 
-// Kein Fetch-Handling - alles geht direkt zum Server
+// Kein fetch Handler - App läuft normal

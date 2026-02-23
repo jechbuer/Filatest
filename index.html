@@ -14,7 +14,7 @@
     <!-- Styles -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/styles.css?v=2">
     
     <!-- Firebase -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
@@ -407,25 +407,8 @@
     <div id="print-area" class="hidden-force"></div>
 
     <!-- Haupt-App Script -->
-    <script type="module" src="js/app.js"></script>
+    <script type="module" src="js/app.js?v=2"></script>
     
-    <!-- Service Worker nur zum Cache-Clearing -->
-    <script>
-        // Alten Service Worker & Cache löschen
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.getRegistrations().then((regs) => {
-                for (let reg of regs) {
-                    reg.unregister();
-                    console.log('SW unregistered');
-                }
-            });
-            caches.keys().then((names) => {
-                for (let name of names) {
-                    caches.delete(name);
-                    console.log('Cache deleted:', name);
-                }
-            });
-        }
-    </script>
+    <!-- Kein Service Worker -->
 </body>
 </html>
