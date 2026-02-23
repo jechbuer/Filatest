@@ -68,7 +68,8 @@ class FilamentDictionary {
         if (spec.product.colors) {
             spec.product.colors.forEach(color => {
                 const key = `${materialName.toLowerCase()}:${color.name.toLowerCase()}`;
-                this.colors.set(key, { ...color, material: materialName, brand });
+                const price = spec.product?.pricing?.single_roll?.price_regular || null;
+                this.colors.set(key, { ...color, material: materialName, brand, price });
                 
                 // SKU indexieren
                 if (color.sku) {
@@ -311,6 +312,35 @@ class FilamentDictionary {
     // Alle Daten für ein Material
     getFullSpecification(materialName) {
         return this.materials.get(materialName?.toLowerCase()) || null;
+    }
+
+    // Preis pro Gramm berechnen
+    getPricePerGram(materialName) {
+        const spec = this.materials.get(materialName?.toLowerCase());
+        if (!spec?.product) return null;
+        
+        const price = spec.product.pricing?.single_roll?.price_regular;
+        const weightStr = spec.product.weight;
+        
+        if (!price || !weightStr) return null;
+        
+        // Gewicht in Gramm extrahieren (z.B. "1kg" -> 1000)
+        const weightMatch = weightStr.match(/(\d+(?:\.\d+)?)\s*(kg|g)/i);
+        if (!weightMatch) return null;
+        
+        let weight = parseFloat(weightMatch[1]);
+        if (weightMatch[2].toLowerCase() === 'kg') {
+            weight *= 1000;
+        }
+        
+        return price / weight;
+    }
+
+    // Preis für bestimmte Menge berechnen
+    calculateCost(materialName, grams) {
+        const pricePerGram = this.getPricePerGram(materialName);
+        if (!pricePerGram || !grams) return null;
+        return pricePerGram * grams;
     }
 
     // Suchvorschläge für Autocomplete

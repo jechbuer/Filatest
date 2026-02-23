@@ -3,6 +3,7 @@ import { initFirebase } from './config/firebase.js';
 import { filamentService } from './services/db.js';
 import { masterDataService } from './services/masterData.js';
 import { filamentDictionary } from './services/filamentDictionary.js';
+import { consumptionLogService } from './services/consumptionLog.js';
 import { 
     updateConnectionStatus, 
     showMessage, 
@@ -204,6 +205,23 @@ class FilamentApp {
             });
         });
 
+        // Log Filter
+        const applyLogFilter = document.getElementById('applyLogFilter');
+        if (applyLogFilter) {
+            applyLogFilter.addEventListener('click', () => this.loadConsumptionLog());
+        }
+
+        // Log Datum Defaults
+        const logDateFrom = document.getElementById('logDateFrom');
+        const logDateTo = document.getElementById('logDateTo');
+        if (logDateFrom && logDateTo) {
+            // Letzter Monat als Default
+            const now = new Date();
+            const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+            logDateFrom.value = lastMonth.toISOString().split('T')[0];
+            logDateTo.value = now.toISOString().split('T')[0];
+        }
+
         // Filter Buttons
         document.querySelectorAll('.filter-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
@@ -267,20 +285,38 @@ class FilamentApp {
         setButtonLoading('saveBtn', true, '⏳ Speichere...');
 
         try {
+            const material = document.getElementById('material').value;
+            const color = document.getElementById('color').value;
+            const weight = parseInt(document.getElementById('nettoAnzeige').textContent) || 0;
+            
+            // Preis aus Dictionary ermitteln
+            let costPerGram = 0;
+            let totalCost = 0;
+            const dictColor = filamentDictionary.findByName(color, material);
+            if (dictColor?.price) {
+                const pricePerGram = filamentDictionary.getPricePerGram(material);
+                if (pricePerGram) {
+                    costPerGram = pricePerGram;
+                    totalCost = pricePerGram * weight;
+                }
+            }
+            
             const data = {
-                Material: document.getElementById('material').value,
-                Color: document.getElementById('color').value,
+                Material: material,
+                Color: color,
                 Manufakturere: document.getElementById('manufacturer').value || 'Unbekannt',
                 Weightbrutto: parseInt(document.getElementById('brutto').value) || 0,
                 Spoolwright: parseInt(document.getElementById('tara').value) || 250,
-                Weightnetto: parseInt(document.getElementById('nettoAnzeige').textContent) || 0,
+                Weightnetto: weight,
                 barcode: document.getElementById('barcode').value || null,
+                costPerGram: costPerGram,
+                originalCost: totalCost,
                 Zimestamp: new Date().toISOString()
             };
 
             await filamentService.create(data);
             soundPlayer.playSuccess();
-            showMessage('✅ Filament gespeichert!');
+            showMessage(`✅ Filament gespeichert!${totalCost > 0 ? ' Wert: €' + totalCost.toFixed(2) : ''}`);
             
             // Formular zurücksetzen
             document.getElementById('filamentForm').reset();
@@ -404,23 +440,55 @@ class FilamentApp {
         const filament = this.filaments.find(f => f.id === id);
         if (!filament) return;
         
-        showConsumeModal(filament, async (amount, note) => {
+        // Projekte laden
+        const projects = await consumptionLogService.getAllProjects();
+        
+        showConsumeModal(filament, async (amount, note, project) => {
             try {
+                // Kosten berechnen
+                let costPerGram = filament.costPerGram || 0;
+                let totalCost = 0;
+                
+                // Wenn kein Preis gespeichert, aus Dictionary holen
+                if (!costPerGram && filamentDictionary.loaded) {
+                    const dictEntry = filamentDictionary.findByName(filament.Color, filament.Material);
+                    if (dictEntry) {
+                        costPerGram = filamentDictionary.getPricePerGram(filament.Material) || 0;
+                    }
+                }
+                totalCost = costPerGram * amount;
+                
+                // Verbrauch in Filament-DB buchen
                 const result = await filamentService.consume(id, amount);
+                
+                // Verbrauch in Log-DB speichern
+                await consumptionLogService.createLogEntry({
+                    filamentId: id,
+                    material: filament.Material,
+                    color: filament.Color,
+                    brand: filament.Manufakturere,
+                    amount: amount,
+                    costPerGram: costPerGram,
+                    totalCost: totalCost,
+                    project: project || null,
+                    note: note || '',
+                    barcode: filament.barcode
+                });
                 
                 // 🎵 KaChing Sound abspielen
                 soundPlayer.playKaChing();
                 
+                const costMsg = totalCost > 0 ? ` (€${totalCost.toFixed(2)})` : '';
                 if (result.deleted) {
-                    showMessage('🗑️ Spule aufgebraucht und entfernt');
+                    showMessage(`🗑️ Spule aufgebraucht${costMsg}`);
                 } else {
-                    showMessage(`✅ ${amount}g verbucht. Verbleibend: ${result.newWeight}g`);
+                    showMessage(`✅ ${amount}g verbucht${costMsg}. Verbleibend: ${result.newWeight}g`);
                 }
             } catch (error) {
                 soundPlayer.playError();
                 showMessage('Fehler beim Buchen: ' + error.message, true);
             }
-        });
+        }, projects);
     }
 
     // Scanner starten
@@ -527,6 +595,10 @@ class FilamentApp {
         if (tab === 'stats') {
             this.loadStats();
         }
+        if (tab === 'logs') {
+            this.loadConsumptionLog();
+            this.loadProjectsForLogFilter();
+        }
     }
 
     // Statistiken laden
@@ -564,6 +636,104 @@ class FilamentApp {
         const searchInput = document.getElementById('searchInput');
         if (searchInput) {
             searchInput.value = '';
+        }
+    }
+
+    // Verbrauchs-Log laden
+    async loadConsumptionLog() {
+        try {
+            const dateFrom = document.getElementById('logDateFrom')?.value;
+            const dateTo = document.getElementById('logDateTo')?.value;
+            const project = document.getElementById('logProjectFilter')?.value;
+            const material = document.getElementById('logMaterialFilter')?.value;
+            
+            const filters = {};
+            if (dateFrom) filters.dateFrom = dateFrom;
+            if (dateTo) filters.dateTo = dateTo;
+            if (project) filters.project = project;
+            if (material) filters.material = material;
+            
+            const { logs, stats } = await consumptionLogService.getLogStats(filters);
+            
+            // Statistiken anzeigen
+            document.getElementById('logTotalEntries').textContent = stats.totalEntries;
+            document.getElementById('logTotalWeight').textContent = stats.totalWeight.toFixed(0) + 'g';
+            document.getElementById('logTotalCost').textContent = '€' + stats.totalCost.toFixed(2);
+            
+            // Liste rendern
+            const container = document.getElementById('logList');
+            if (logs.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center text-gray-500 py-8">
+                        <div class="text-3xl mb-2">📋</div>
+                        <p class="text-sm">Keine Einträge gefunden</p>
+                    </div>`;
+                return;
+            }
+            
+            container.innerHTML = logs.map(log => `
+                <div class="glass rounded-lg p-3 border border-gray-700">
+                    <div class="flex justify-between items-start">
+                        <div class="flex-1">
+                            <div class="flex items-center gap-2">
+                                <span class="font-semibold text-white">${log.material || 'Unknown'}</span>
+                                <span class="text-sm text-gray-400">${log.color || ''}</span>
+                                ${log.project ? `<span class="text-xs bg-blue-900 text-blue-300 px-2 py-0.5 rounded">${log.project}</span>` : ''}
+                            </div>
+                            <div class="text-xs text-gray-500 mt-1">
+                                ${new Date(log.date).toLocaleString('de-DE')}
+                                ${log.note ? '• ' + log.note : ''}
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <div class="font-bold text-green-400">${log.amount}g</div>
+                            ${log.totalCost > 0 ? `<div class="text-xs text-yellow-400">€${log.totalCost.toFixed(2)}</div>` : ''}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+            
+        } catch (error) {
+            console.error('Fehler beim Laden des Logs:', error);
+            showMessage('Fehler beim Laden des Logs', true);
+        }
+    }
+
+    // Projekte für Log-Filter laden
+    async loadProjectsForLogFilter() {
+        try {
+            const projects = await consumptionLogService.getAllProjects();
+            const select = document.getElementById('logProjectFilter');
+            if (select) {
+                const currentValue = select.value;
+                select.innerHTML = '<option value="">Alle Projekte</option>' + 
+                    projects.map(p => `<option value="${p.name}">${p.name}</option>`).join('');
+                select.value = currentValue;
+            }
+        } catch (error) {
+            console.error('Fehler beim Laden der Projekte:', error);
+        }
+    }
+
+    // Log als CSV exportieren
+    async exportLogToCSV() {
+        try {
+            const dateFrom = document.getElementById('logDateFrom')?.value;
+            const dateTo = document.getElementById('logDateTo')?.value;
+            const project = document.getElementById('logProjectFilter')?.value;
+            const material = document.getElementById('logMaterialFilter')?.value;
+            
+            const filters = {};
+            if (dateFrom) filters.dateFrom = dateFrom;
+            if (dateTo) filters.dateTo = dateTo;
+            if (project) filters.project = project;
+            if (material) filters.material = material;
+            
+            const { logs } = await consumptionLogService.getLogStats(filters);
+            consumptionLogService.exportToCSV(logs);
+            showMessage('✅ Log als CSV exportiert');
+        } catch (error) {
+            showMessage('Fehler beim Exportieren', true);
         }
     }
 

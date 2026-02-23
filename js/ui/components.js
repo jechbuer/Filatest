@@ -205,6 +205,7 @@ export function renderFilamentList(filaments, containerId = 'filamentList', coun
                         <div class="text-xs text-gray-600 leading-tight">
                             Brutto: ${fil.Weightbrutto || 0}g<br>
                             Tara: ${fil.Spoolwright || 250}g
+                            ${fil.originalCost > 0 ? `<br><span class="text-yellow-500">€${fil.originalCost.toFixed(2)}</span>` : ''}
                         </div>
                     </div>
                 </div>
@@ -335,10 +336,20 @@ export function renderStats(stats, containerId = 'statsContainer', onMaterialCli
 }
 
 // Verbrauchs-Formular anzeigen
-export function showConsumeModal(filament, onConfirm) {
+export function showConsumeModal(filament, onConfirm, projects = []) {
     const modal = document.createElement('div');
     modal.id = 'consume-modal';
     modal.className = 'fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4';
+    
+    // Kosten anzeigen wenn verfügbar
+    const costInfo = filament.costPerGram 
+        ? `<div class="text-xs text-yellow-400 mt-1">€${(filament.costPerGram * filament.Weightnetto).toFixed(2)} Gesamtwert</div>`
+        : '';
+    
+    // Projekte für Dropdown
+    const projectOptions = projects.length > 0 
+        ? projects.map(p => `<option value="${escapeHtml(p.name)}">${escapeHtml(p.name)}</option>`).join('')
+        : '';
     
     modal.innerHTML = `
         <div class="glass rounded-2xl p-6 w-full max-w-md animate-in">
@@ -351,6 +362,7 @@ export function showConsumeModal(filament, onConfirm) {
                 <div class="text-sm mt-2">
                     Aktueller Bestand: <span class="font-bold text-green-400">${filament.Weightnetto}g</span>
                 </div>
+                ${costInfo}
             </div>
             
             <div class="space-y-4">
@@ -360,6 +372,17 @@ export function showConsumeModal(filament, onConfirm) {
                            class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white focus:border-blue-500 transition"
                            placeholder="z.B. 50" min="1" max="${filament.Weightnetto}">
                 </div>
+                
+                ${projects.length > 0 ? `
+                <div>
+                    <label class="block text-sm text-gray-400 mb-1">Projekt</label>
+                    <select id="consume-project" 
+                            class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white focus:border-blue-500 transition">
+                        <option value="">-- Kein Projekt --</option>
+                        ${projectOptions}
+                    </select>
+                </div>
+                ` : ''}
                 
                 <div>
                     <label class="block text-sm text-gray-400 mb-1">Notiz (optional)</label>
@@ -394,6 +417,7 @@ export function showConsumeModal(filament, onConfirm) {
     modal.querySelector('#confirm-consume').addEventListener('click', () => {
         const amount = parseInt(document.getElementById('consume-amount').value) || 0;
         const note = document.getElementById('consume-note').value;
+        const project = document.getElementById('consume-project')?.value || '';
         
         if (amount <= 0) {
             showMessage('Bitte gib einen gültigen Verbrauch ein', true);
@@ -405,7 +429,7 @@ export function showConsumeModal(filament, onConfirm) {
             return;
         }
         
-        onConfirm(amount, note);
+        onConfirm(amount, note, project);
         modal.remove();
     });
     
